@@ -131,7 +131,16 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 <div class="panel active" id="panel-compras">
 <div class="card">
   <div class="sec"><i class="ti ti-search"></i> Buscar orden de compra</div>
-  <div class="info-note"><i class="ti ti-info-circle"></i> Escribe el número de OC o nombre del proveedor — los datos se cargan automáticamente desde el Tablero MP.</div>
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+    <div class="info-note" style="margin:0;flex:1"><i class="ti ti-info-circle"></i> Escribe el número de OC o nombre del proveedor — los datos se cargan desde el Tablero MP.</div>
+    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
+      <label for="csv-upload" style="display:inline-flex;align-items:center;gap:6px;padding:8px 14px;background:#1a3a8f;color:#fff;border-radius:8px;cursor:pointer;font-size:12px;font-weight:500;white-space:nowrap">
+        <i class="ti ti-refresh"></i> Actualizar OC desde archivo
+      </label>
+      <input type="file" id="csv-upload" accept=".csv,.xlsx,.xls" style="display:none" onchange="cargarArchivoOC(this)">
+      <span id="csv-status" style="font-size:11px;color:#64748b"></span>
+    </div>
+  </div>
   <div class="fg">
     <div class="fl">
       <label>OC # <span style="color:#3b82f6;font-size:10px">(Tablero MP)</span></label>
@@ -563,6 +572,59 @@ function switchTab(n){
 }
 
 // ─── BÚSQUEDA OC ─────────────────────────────────────────────────────────────
+function cargarArchivoOC(input){
+  const file = input.files[0];
+  if(!file) return;
+  const status = document.getElementById('csv-status');
+  status.textContent = 'Cargando...';
+  const reader = new FileReader();
+  reader.onload = function(e){
+    try{
+      const text = e.target.result;
+      const lines = text.split('\n').filter(l=>l.trim());
+      if(lines.length < 2){ status.textContent = '⚠ Archivo vacío o sin datos'; return; }
+      // detectar separador
+      const sep = lines[0].includes('\t') ? '\t' : ',';
+      const headers = lines[0].split(sep).map(h=>h.trim().replace(/^"|"$/g,'').toLowerCase());
+      // mapear columnas flexiblemente
+      const idx = {
+        oc:    headers.findIndex(h=>h.includes('documento')||h.includes('doc')||h==='oc'),
+        fecha: headers.findIndex(h=>h.includes('fecha')),
+        art:   headers.findIndex(h=>h.includes('art')),
+        qty:   headers.findIndex(h=>h.includes('solic')||h.includes('cant')||h.includes('qty')),
+        cod:   headers.findIndex(h=>h.includes('cod')||h.includes('código')||h.includes('codigo')),
+        prov:  headers.findIndex(h=>h.includes('prov')),
+        desc:  headers.findIndex(h=>h.includes('desc'))
+      };
+      const nuevas = [];
+      for(let i=1;i<lines.length;i++){
+        const cols = lines[i].split(sep).map(c=>c.trim().replace(/^"|"$/g,''));
+        const oc = idx.oc>=0 ? cols[idx.oc] : '';
+        if(!oc) continue;
+        nuevas.push({
+          oc:    oc,
+          fecha: idx.fecha>=0 ? cols[idx.fecha] : '',
+          art:   idx.art>=0  ? cols[idx.art]   : '',
+          qty:   idx.qty>=0  ? cols[idx.qty]   : '',
+          cod:   idx.cod>=0  ? cols[idx.cod]   : '',
+          prov:  idx.prov>=0 ? cols[idx.prov]  : '',
+          desc:  idx.desc>=0 ? cols[idx.desc]  : ''
+        });
+      }
+      if(!nuevas.length){ status.textContent = '⚠ No se encontraron OC válidas'; return; }
+      // reemplazar TABLERO global
+      TABLERO.length = 0;
+      nuevas.forEach(r => TABLERO.push(r));
+      status.textContent = `✅ ${nuevas.length} líneas cargadas — ${[...new Set(nuevas.map(r=>r.oc))].length} OC únicas`;
+      input.value = '';
+    } catch(err){
+      status.textContent = '⚠ Error al leer el archivo';
+      console.error(err);
+    }
+  };
+  reader.readAsText(file, 'UTF-8');
+}
+
 function buscarOC(val, ctx){
   const sgId = ctx==='compras'?'oc-suggest': ctx==='vig'?'oc-suggest-vig':'oc-suggest-rec';
   const sg = document.getElementById(sgId);
