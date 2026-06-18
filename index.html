@@ -587,15 +587,23 @@ function cargarArchivoOC(input){
       const sep = lines[0].includes('\t') ? '\t' : ',';
       const headers = lines[0].split(sep).map(h=>h.trim().replace(/^"|"$/g,'').toLowerCase());
       // mapear columnas flexiblemente
+      // debug: mostrar headers detectados en consola
+      console.log('Headers detectados:', headers);
       const idx = {
-        oc:    headers.findIndex(h=>h.includes('número de doc')||h.includes('numero de doc')||h.includes('ndoc')||h==='oc#'||h==='oc'),
-        fecha: headers.findIndex(h=>h.includes('fecha nec')||h.includes('fecha necesaria')),
-        art:   headers.findIndex(h=>h.includes('número de art')||h.includes('numero de art')||h.includes('artículo')||h.includes('articulo')),
+        oc:    headers.findIndex(h=>h.includes('número de doc')||h.includes('numero de doc')||h.includes('ndoc')||h==='oc#'||h==='oc'||h.includes('documento')),
+        fecha: headers.findIndex(h=>h.includes('fecha nec')||h.includes('fecha necesaria')||h.includes('fecha')),
+        art:   headers.findIndex(h=>h.includes('número de art')||h.includes('numero de art')||h.includes('artículo')||h.includes('articulo')||h.includes('art')),
         qty:   headers.findIndex(h=>h.includes('solicit')||h.includes('cantidad')||h.includes('qty')),
         cod:   headers.findIndex(h=>h==='codigo'||h==='código'||h.includes('cod')),
-        prov:  headers.findIndex(h=>h.includes('proveedor')||h.includes('prov')),
+        prov:  headers.findIndex(h=>h.includes('proveedor')||h==='prov'||h.includes('supplier')||h.includes('vendor')),
         desc:  headers.findIndex(h=>h.includes('descrip'))
       };
+      console.log('Índices mapeados:', idx);
+      // verificar que proveedor se mapeo bien
+      if(idx.prov<0){
+        // busqueda de emergencia — columna que contenga nombres largos
+        idx.prov = headers.findIndex(h=>h.includes('nombre')||h.includes('razon')||h.includes('razón'));
+      }
       const nuevas = [];
       for(let i=1;i<lines.length;i++){
         const cols = lines[i].split(sep).map(c=>c.trim().replace(/^"|"$/g,''));
