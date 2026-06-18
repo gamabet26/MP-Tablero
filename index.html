@@ -588,13 +588,13 @@ function cargarArchivoOC(input){
       const headers = lines[0].split(sep).map(h=>h.trim().replace(/^"|"$/g,'').toLowerCase());
       // mapear columnas flexiblemente
       const idx = {
-        oc:    headers.findIndex(h=>h.includes('documento')||h.includes('doc')||h==='oc'),
-        fecha: headers.findIndex(h=>h.includes('fecha')),
-        art:   headers.findIndex(h=>h.includes('art')),
-        qty:   headers.findIndex(h=>h.includes('solic')||h.includes('cant')||h.includes('qty')),
-        cod:   headers.findIndex(h=>h.includes('cod')||h.includes('código')||h.includes('codigo')),
-        prov:  headers.findIndex(h=>h.includes('prov')),
-        desc:  headers.findIndex(h=>h.includes('desc'))
+        oc:    headers.findIndex(h=>h.includes('número de doc')||h.includes('numero de doc')||h.includes('ndoc')||h==='oc#'||h==='oc'),
+        fecha: headers.findIndex(h=>h.includes('fecha nec')||h.includes('fecha necesaria')),
+        art:   headers.findIndex(h=>h.includes('número de art')||h.includes('numero de art')||h.includes('artículo')||h.includes('articulo')),
+        qty:   headers.findIndex(h=>h.includes('solicit')||h.includes('cantidad')||h.includes('qty')),
+        cod:   headers.findIndex(h=>h==='codigo'||h==='código'||h.includes('cod')),
+        prov:  headers.findIndex(h=>h.includes('proveedor')||h.includes('prov')),
+        desc:  headers.findIndex(h=>h.includes('descrip'))
       };
       const nuevas = [];
       for(let i=1;i<lines.length;i++){
@@ -630,7 +630,7 @@ function buscarOC(val, ctx){
   if(!val||val.length<3){sg.style.display='none';return}
   const byOC   = TABLERO.filter(r=>r.oc.includes(val));
   const byProv = TABLERO.filter(r=>r.prov.toLowerCase().includes(val.toLowerCase()));
-  const all = [...new Map([...byOC,...byProv].map(r=>[r.oc,r])).values()].slice(0,8);
+  const all = [...new Map([...byOC,...byProv].map(r=>[r.oc,r])).values()].slice(0,20);
   if(!all.length){sg.style.display='none';return}
   sg.innerHTML = all.map(r=>{
     const tipo=getTipo(r.art,r.desc);
