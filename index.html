@@ -153,8 +153,23 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
   </div>
 
   <div id="multi-lines" style="display:none;margin-bottom:12px">
-    <div class="sec">Líneas de esta OC — selecciona la que llega</div>
+    <div class="sec">Líneas de esta OC — selecciona las que llegan e ingresa kg a llegar</div>
     <div id="lines-container"></div>
+    <div id="kg-resumen" style="display:none;margin-top:10px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:12px 16px">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+        <div>
+          <div style="font-size:11px;font-weight:600;color:#1d4ed8;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">📦 Estimado en base a kg a llegar</div>
+          <div style="display:flex;align-items:baseline;gap:8px">
+            <span id="kg-total-display" style="font-size:13px;color:#64748b"></span>
+          </div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:11px;font-weight:600;color:#1d4ed8;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Est. Tarimas</div>
+          <div><span id="kg-tar-num" style="font-size:28px;font-weight:700;color:#1d4ed8">—</span> <span style="font-size:13px;color:#64748b">tarimas</span></div>
+          <div id="kg-tar-det" style="font-size:10px;color:#94a3b8;margin-top:2px"></div>
+        </div>
+      </div>
+    </div>
   </div>
 
   <div id="c-fields" style="display:none">
@@ -673,13 +688,30 @@ function selectOC(oc, ctx){
       document.getElementById('c-tarimas-est').style.display='none';
       document.getElementById('multi-lines').style.display='block';
       selectedLines[oc]=lines;
-      document.getElementById('lines-container').innerHTML=lines.map((l,i)=>`
-        <div class="multi-row" id="ml-${i}" onclick="pickLine(${i},'${oc}')">
-          <span class="mr-num">Línea ${i+1}</span>
-          <span class="tipo-tag ${getTipo(l.art,l.desc).cls}">${getTipo(l.art,l.desc).label}</span>
-          <div class="mr-desc">${l.desc}</div>
-          <div class="mr-qty">Cant: ${l.qty} | Art: ${l.art}</div>
-        </div>`).join('');
+      document.getElementById('lines-container').innerHTML=lines.map((l,i)=>{
+        const tipo=getTipo(l.art,l.desc);
+        return`<div class="multi-row" id="ml-${i}" onclick="pickLine(${i},'${oc}')">
+          <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+            <div>
+              <span class="mr-num">Línea ${i+1}</span>
+              <span class="tipo-tag ${tipo.cls}">${tipo.label}</span>
+              <div class="mr-desc">${l.desc}</div>
+              <div class="mr-qty">OC: <strong>${parseFloat((l.qty||0).toString().replace(/,/g,'')).toLocaleString()} kg</strong> &nbsp;|&nbsp; Art: ${l.art}</div>
+            </div>
+            <div onclick="event.stopPropagation()" style="display:flex;align-items:center;gap:6px;min-width:180px">
+              <label style="font-size:11px;color:#64748b;white-space:nowrap">Kg a llegar:</label>
+              <input type="number" class="kg-input" data-art="${l.art}" data-line="${i}"
+                placeholder="0" min="0"
+                style="width:100px;padding:6px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px;font-family:inherit;outline:none"
+                oninput="recalcKgEstimado()"
+                onfocus="document.querySelectorAll('.multi-row').forEach(el=>el.classList.remove('sel-row'));document.getElementById('ml-${i}').classList.add('sel-row');fillComprasFields(selectedLines['${oc}'][${i}])">
+              <span style="font-size:12px;color:#64748b">kg</span>
+            </div>
+          </div>
+        </div>`;
+      }).join('');
+      document.getElementById('kg-resumen').style.display='none';
+      window._tarEst=null;
     }
   } else if(ctx==='vig'){
     document.getElementById('v-oc').value=oc;
@@ -728,6 +760,37 @@ function pickLine(idx, oc){
   fillComprasFields(selectedLines[oc][idx]);
 }
 
+function recalcKgEstimado(){
+  // suma todos los kg ingresados en los campos de líneas
+  const inputs = document.querySelectorAll('.kg-input');
+  if(!inputs.length) return;
+  let totalKg=0, art='', anyVal=false;
+  inputs.forEach(inp=>{
+    const v=parseFloat(inp.value||0);
+    if(v>0){ totalKg+=v; anyVal=true; }
+    if(!art) art=inp.dataset.art;
+  });
+  const resumen=document.getElementById('kg-resumen');
+  if(!anyVal){ resumen.style.display='none'; return; }
+  resumen.style.display='block';
+  document.getElementById('kg-total-display').textContent=`Total kg a llegar: ${totalKg.toLocaleString()} kg`;
+  // calcular tarimas con el art de la primera línea y kg totales
+  const tar=calcTarimas(art, totalKg.toString());
+  if(tar){
+    document.getElementById('kg-tar-num').textContent=tar.tarimas;
+    document.getElementById('kg-tar-det').textContent=tar.detalle;
+    // guardar en variable global para usarlo al guardar
+    window._tarEst=tar.tarimas;
+    window._tarPres=tar.presentacion;
+    window._tarDet=tar.detalle;
+    window._kgLlegar=totalKg;
+  } else {
+    document.getElementById('kg-tar-num').textContent='—';
+    document.getElementById('kg-tar-det').textContent='No se puede calcular para este tipo';
+    window._tarEst=null;
+  }
+}
+
 function fillComprasFields(line){
   document.getElementById('c-fields').style.display='block';
   document.getElementById('c-art').textContent  = line.art;
@@ -771,7 +834,8 @@ function guardarCompra(){
   if(!oc){alert('Ingresa el número de OC');return}
   const art=document.getElementById('c-art').textContent.trim();
   const qty=document.getElementById('c-qty').textContent.trim();
-  const tar=calcTarimas(art,qty);
+  // usar tarimas calculadas desde kg reales si existen, sino desde qty OC
+  const tar = window._tarEst ? {tarimas:window._tarEst, presentacion:window._tarPres, detalle:window._tarDet} : calcTarimas(art,qty);
   const idx=records.findIndex(r=>r.oc===oc);
   const rec={
     oc, art, qty,
