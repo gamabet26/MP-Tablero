@@ -97,6 +97,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
   <div class="tab active" onclick="switchTab('compras')" id="tab-compras"><i class="ti ti-shopping-cart"></i> Compras</div>
   <div class="tab" onclick="switchTab('vigilancia')" id="tab-vigilancia"><i class="ti ti-shield-check"></i> Vigilancia</div>
   <div class="tab" onclick="switchTab('recibo')" id="tab-recibo"><i class="ti ti-package"></i> Recibo MP</div>
+  <div class="tab" onclick="switchTab('calendario')" id="tab-calendario"><i class="ti ti-calendar-month"></i> Calendario</div>
   <div class="tab" onclick="switchTab('historial')" id="tab-historial"><i class="ti ti-history"></i> Historial</div>
 </div>
 
@@ -158,11 +159,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
     </div>
     <!-- Campo cantidad a llegar - línea única -->
     <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px 16px;margin-bottom:12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-      <label style="font-size:12px;font-weight:600;color:#475569">Cantidad a llegar en esta entrega:</label>
+      <label style="font-size:12px;font-weight:600;color:#475569">Cantidad por llegar:</label>
       <input type="number" id="kg-single-input" min="0" placeholder="0"
         style="width:120px;padding:7px 10px;border:1px solid #cbd5e1;border-radius:8px;font-size:14px;font-family:inherit;outline:none;color:#1e293b"
         oninput="recalcKgSingle()">
-      <span style="font-size:13px;color:#64748b" id="c-unidad-label">unidades</span>
       <div id="kg-single-result" style="width:100%;margin-top:6px;font-size:13px;color:#1d4ed8;font-weight:500"></div>
     </div>
     <div class="tar-box" id="c-tarimas-est" style="display:none">
@@ -310,7 +310,53 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 </div>
 </div>
 
-<!-- ═══ HISTORIAL ═══ -->
+<!-- ═══ CALENDARIO ═══ -->
+<div class="panel" id="panel-calendario">
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:16px">
+    <div style="display:flex;align-items:center;gap:8px">
+      <button onclick="calNav(-1)" style="padding:6px 12px;border:1px solid #cbd5e1;border-radius:8px;background:#fff;cursor:pointer;font-size:14px">‹</button>
+      <span id="cal-title" style="font-size:16px;font-weight:700;color:#1e293b;min-width:160px;text-align:center"></span>
+      <button onclick="calNav(1)" style="padding:6px 12px;border:1px solid #cbd5e1;border-radius:8px;background:#fff;cursor:pointer;font-size:14px">›</button>
+      <button onclick="calGoToday()" style="padding:6px 12px;border:1px solid #cbd5e1;border-radius:8px;background:#fff;cursor:pointer;font-size:12px;color:#1d4ed8;font-weight:600">Hoy</button>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px">
+      <label style="font-size:12px;color:#64748b;font-weight:500">Ver:</label>
+      <select id="cal-range" onchange="renderCalendario()" style="font-size:12px;padding:5px 8px;border:1px solid #cbd5e1;border-radius:8px;background:#fff;color:#1e293b;font-family:inherit">
+        <option value="1">1 mes</option>
+        <option value="3" selected>3 meses</option>
+        <option value="6">6 meses</option>
+        <option value="12">Todo el año</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Leyenda -->
+  <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px">
+    <span style="font-size:11px;display:flex;align-items:center;gap:4px"><span style="width:12px;height:12px;border-radius:3px;background:#ede9fe;border:1px solid #7c3aed;display:inline-block"></span>RESINA</span>
+    <span style="font-size:11px;display:flex;align-items:center;gap:4px"><span style="width:12px;height:12px;border-radius:3px;background:#fce7f3;border:1px solid #be185d;display:inline-block"></span>TINTA</span>
+    <span style="font-size:11px;display:flex;align-items:center;gap:4px"><span style="width:12px;height:12px;border-radius:3px;background:#ecfdf5;border:1px solid #059669;display:inline-block"></span>EMPAQUE</span>
+    <span style="font-size:11px;display:flex;align-items:center;gap:4px"><span style="width:12px;height:12px;border-radius:3px;background:#fff7ed;border:1px solid #ea580c;display:inline-block"></span>SOLVENTE</span>
+    <span style="font-size:11px;display:flex;align-items:center;gap:4px"><span style="width:12px;height:12px;border-radius:3px;background:#f0fdf4;border:1px solid #16a34a;display:inline-block"></span>ADITIVO</span>
+    <div style="margin-left:auto;display:flex;gap:8px;align-items:center">
+      <span style="font-size:11px;display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:50%;background:#22c55e;display:inline-block"></span>1-2</span>
+      <span style="font-size:11px;display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:50%;background:#f59e0b;display:inline-block"></span>3-4</span>
+      <span style="font-size:11px;display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:50%;background:#ef4444;display:inline-block"></span>5+</span>
+    </div>
+  </div>
+
+  <div id="cal-container"></div>
+
+  <!-- Modal detalle día -->
+  <div id="cal-modal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.4);z-index:1000;align-items:center;justify-content:center">
+    <div style="background:#fff;border-radius:12px;padding:20px;max-width:500px;width:90%;max-height:80vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.3)">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+        <h3 id="cal-modal-title" style="font-size:16px;font-weight:700;color:#1e293b"></h3>
+        <button onclick="document.getElementById('cal-modal').style.display='none'" style="border:none;background:none;cursor:pointer;font-size:20px;color:#94a3b8">✕</button>
+      </div>
+      <div id="cal-modal-body"></div>
+    </div>
+  </div>
+</div>
 <div class="panel" id="panel-historial">
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
     <div style="display:flex;gap:8px;flex-wrap:wrap">
@@ -463,12 +509,27 @@ function stampTime(id){
   if(el) el.textContent=t;
 }
 
+// ═══ CALENDARIO ═══
+let calBase = new Date();
+calBase.setDate(1);
+
+function calNav(dir){
+  const range = parseInt(document.getElementById('cal-range').value);
+  calBase.setMonth(calBase.getMonth() + dir * (range === 1 ? 1 : 1));
+  renderCalendario();
+}
+function calGoToday(){
+  calBase = new Date(); calBase.setDate(1);
+  renderCalendario();
+}
+
 function switchTab(n){
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   document.getElementById('panel-'+n).classList.add('active');
   document.getElementById('tab-'+n).classList.add('active');
   if(n==='historial') renderLog();
+  if(n==='calendario') renderCalendario();
 }
 
 // ═══ CARGA CSV ═══
@@ -800,8 +861,20 @@ function fmtSecs(s){return String(Math.floor(s/60)).padStart(2,'0')+':'+String(s
 function renderLog(){
   if(logTimer){clearInterval(logTimer);logTimer=null;}
   const buscar=(document.getElementById('h-buscar').value||'').toLowerCase();
+
+  // solo semana actual + 2 siguientes (21 días desde hoy)
+  const hoy=new Date(); hoy.setHours(0,0,0,0);
+  const limite=new Date(hoy); limite.setDate(limite.getDate()+21);
+
   const tbody=document.getElementById('log-body');
-  const filtered=records.filter(r=>!buscar||r.oc.includes(buscar)||(r.prov||'').toLowerCase().includes(buscar));
+  const filtered=records.filter(r=>{
+    if(buscar&&!r.oc.includes(buscar)&&!(r.prov||'').toLowerCase().includes(buscar)) return false;
+    if(!r.fecha) return true; // sin fecha siempre visible
+    let d;
+    if(r.fecha.includes('-')) d=new Date(r.fecha+'T00:00:00');
+    else{const[mo,dy,yr]=r.fecha.split('/');d=new Date(yr,mo-1,dy);}
+    return isNaN(d)||d<=limite;
+  });
   if(!filtered.length){
     tbody.innerHTML='<tr><td colspan="15" style="text-align:center;color:#94a3b8;padding:24px;font-size:13px">Sin registros aún.</td></tr>';
     return;
@@ -852,6 +925,183 @@ function renderLog(){
       });
     },1000);
   }
+}
+
+function renderCalendario(){
+  const range  = parseInt(document.getElementById('cal-range').value);
+  const meses  = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  const dias   = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+  const today  = new Date(); today.setHours(0,0,0,0);
+
+  // índice de OC por fecha
+  const byDate = {};
+  records.forEach(r=>{
+    if(!r.fecha) return;
+    // fecha guardada en formato YYYY-MM-DD o MM/DD/YYYY
+    let d;
+    if(r.fecha.includes('-')) d = new Date(r.fecha+'T00:00:00');
+    else { const[mo,dy,yr]=r.fecha.split('/'); d=new Date(yr,mo-1,dy); }
+    if(isNaN(d)) return;
+    const key = d.toISOString().slice(0,10);
+    if(!byDate[key]) byDate[key]=[];
+    byDate[key].push(r);
+  });
+
+  // título
+  const endMonth = new Date(calBase.getFullYear(), calBase.getMonth()+range-1, 1);
+  document.getElementById('cal-title').textContent =
+    range===1
+      ? `${meses[calBase.getMonth()]} ${calBase.getFullYear()}`
+      : `${meses[calBase.getMonth()]} – ${meses[endMonth.getMonth()]} ${endMonth.getFullYear()}`;
+
+  const container = document.getElementById('cal-container');
+  container.innerHTML = '';
+
+  const tipoColor = {
+    RESINA:  {bg:'#ede9fe',border:'#7c3aed',text:'#5b21b6'},
+    TINTA:   {bg:'#fce7f3',border:'#be185d',text:'#9d174d'},
+    EMPAQUE: {bg:'#ecfdf5',border:'#059669',text:'#065f46'},
+    SOLVENTE:{bg:'#fff7ed',border:'#ea580c',text:'#9a3412'},
+    ADITIVO: {bg:'#f0fdf4',border:'#16a34a',text:'#166534'},
+    OTRO:    {bg:'#f1f5f9',border:'#94a3b8',text:'#475569'}
+  };
+
+  for(let m=0; m<range; m++){
+    const año  = calBase.getFullYear();
+    const mes  = calBase.getMonth() + m;
+    const fecha1 = new Date(año, mes, 1);
+    const diasEnMes = new Date(año, mes+1, 0).getDate();
+    const primerDia = fecha1.getDay();
+
+    const wrap = document.createElement('div');
+    wrap.style.cssText='background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:14px;margin-bottom:18px';
+
+    // encabezado mes
+    const h = document.createElement('div');
+    h.style.cssText='font-size:15px;font-weight:700;color:#1e293b;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid #f1f5f9';
+    h.textContent=`${meses[fecha1.getMonth()]} ${fecha1.getFullYear()}`;
+    wrap.appendChild(h);
+
+    // grid días semana
+    const grid = document.createElement('div');
+    grid.style.cssText='display:grid;grid-template-columns:repeat(7,1fr);gap:4px';
+
+    dias.forEach(d=>{
+      const th=document.createElement('div');
+      th.style.cssText='text-align:center;font-size:11px;font-weight:600;color:#94a3b8;padding:4px 0';
+      th.textContent=d;
+      grid.appendChild(th);
+    });
+
+    // celdas vacías inicio
+    for(let i=0;i<primerDia;i++){
+      const empty=document.createElement('div');
+      grid.appendChild(empty);
+    }
+
+    // días
+    for(let d=1;d<=diasEnMes;d++){
+      const fecha = new Date(año, mes, d);
+      const key   = fecha.toISOString().slice(0,10);
+      const ocs   = byDate[key]||[];
+      const esHoy = fecha.getTime()===today.getTime();
+      const esPasado = fecha < today;
+
+      const cell = document.createElement('div');
+      cell.style.cssText=`border-radius:8px;padding:4px;min-height:64px;cursor:pointer;transition:all .15s;
+        background:${esHoy?'#eff6ff':esPasado?'#fafafa':'#fff'};
+        border:${esHoy?'2px solid #3b82f6':'1px solid #f1f5f9'};
+        opacity:${esPasado&&!ocs.length?.5:1}`;
+
+      // número día + semáforo
+      const top = document.createElement('div');
+      top.style.cssText='display:flex;align-items:center;justify-content:space-between;margin-bottom:3px';
+      const num = document.createElement('span');
+      num.style.cssText=`font-size:13px;font-weight:${esHoy?'700':'500'};color:${esHoy?'#1d4ed8':'#1e293b'}`;
+      num.textContent=d;
+      top.appendChild(num);
+      if(ocs.length){
+        const dot=document.createElement('span');
+        dot.style.cssText=`width:9px;height:9px;border-radius:50%;display:inline-block;background:${ocs.length>=5?'#ef4444':ocs.length>=3?'#f59e0b':'#22c55e'}`;
+        top.appendChild(dot);
+      }
+      cell.appendChild(top);
+
+      // chips de OC
+      const shown = ocs.slice(0,3);
+      shown.forEach(r=>{
+        const tipo=getTipo(r.art,r.desc).label;
+        const col=tipoColor[tipo]||tipoColor.OTRO;
+        const chip=document.createElement('div');
+        chip.style.cssText=`font-size:9px;font-weight:600;padding:1px 4px;border-radius:3px;margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+          background:${col.bg};color:${col.text};border:1px solid ${col.border}`;
+        chip.textContent=`${r.oc} ${(r.prov||'').split(' ')[0]}`;
+        cell.appendChild(chip);
+      });
+      if(ocs.length>3){
+        const more=document.createElement('div');
+        more.style.cssText='font-size:9px;color:#94a3b8;text-align:right';
+        more.textContent=`+${ocs.length-3} más`;
+        cell.appendChild(more);
+      }
+
+      // tarimas del día
+      if(ocs.length){
+        const tarTotal=ocs.reduce((s,r)=>{
+          const t=calcTarimas(r.art,r.tar_est?null:r.qty);
+          return s+(r.tar_est||0)+(t?t.tarimas:0);
+        },0);
+        if(tarTotal>0){
+          const tarLabel=document.createElement('div');
+          tarLabel.style.cssText='font-size:9px;color:#64748b;margin-top:2px;text-align:right';
+          tarLabel.textContent=`~${Math.round(tarTotal)} tar.`;
+          cell.appendChild(tarLabel);
+        }
+      }
+
+      // click → modal
+      if(ocs.length){
+        cell.onclick=()=>showDayModal(key, ocs, meses, tipoColor);
+        cell.style.cursor='pointer';
+      }
+      cell.onmouseenter=()=>{if(ocs.length) cell.style.background='#f0f9ff'};
+      cell.onmouseleave=()=>{if(!esHoy) cell.style.background=esPasado?'#fafafa':'#fff'};
+
+      grid.appendChild(cell);
+    }
+    wrap.appendChild(grid);
+    container.appendChild(wrap);
+  }
+}
+
+function showDayModal(key, ocs, meses, tipoColor){
+  const [yr,mo,dy]=key.split('-');
+  const fecha=new Date(yr,mo-1,dy);
+  const nombres=['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+  document.getElementById('cal-modal-title').textContent=
+    `${nombres[fecha.getDay()]} ${parseInt(dy)} de ${meses[parseInt(mo)-1]} ${yr}`;
+
+  const pm={pendiente:'p-p',dentro:'p-d',fuera:'p-f',recibido:'p-r'};
+  document.getElementById('cal-modal-body').innerHTML=ocs.map(r=>{
+    const tipo=getTipo(r.art,r.desc);
+    const tar=r.tar_est||(calcTarimas(r.art,r.qty)?calcTarimas(r.art,r.qty).tarimas:'—');
+    return`<div style="border:1px solid #e2e8f0;border-radius:8px;padding:10px 12px;margin-bottom:8px">
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+        <strong style="color:#1d4ed8">OC ${r.oc}</strong>
+        <span class="tipo-tag ${tipo.cls}">${tipo.label}</span>
+        <span class="pill ${pm[r.estado]||'p-p'}" style="margin-left:auto">${r.estado||'pendiente'}</span>
+      </div>
+      <div style="font-size:12px;color:#475569;margin-bottom:2px">${r.prov||'—'}</div>
+      <div style="font-size:11px;color:#64748b;margin-bottom:4px">${r.desc||'—'}</div>
+      <div style="display:flex;gap:12px;font-size:11px;color:#64748b">
+        <span>🕐 ${r.hora||'Sin hora'}</span>
+        <span>📦 ${tar} tarimas est.</span>
+        <span>🚛 ${r.unidad||'—'}</span>
+        <span>🏭 ${r.planta||'—'}</span>
+      </div>
+    </div>`;
+  }).join('');
+  document.getElementById('cal-modal').style.display='flex';
 }
 
 function exportarCSV(){
