@@ -519,16 +519,19 @@ function buscarOC(val,ctx){
   const sgId=ctx==='compras'?'oc-suggest':ctx==='vig'?'oc-suggest-vig':'oc-suggest-rec';
   const sg=document.getElementById(sgId);
   if(!val||val.length<2){sg.style.display='none';return;}
-  const byOC=TABLERO.filter(r=>r.oc.includes(val));
-  const byProv=TABLERO.filter(r=>(r.prov||'').toLowerCase().includes(val.toLowerCase()));
+  const byOC   = TABLERO.filter(r=>r.oc.includes(val));
+  const byProv = TABLERO.filter(r=>(r.prov||'').toLowerCase().includes(val.toLowerCase()));
+  // deduplicar por OC para el dropdown (mostrar una entrada por OC)
   const all=[...new Map([...byOC,...byProv].map(r=>[r.oc,r])).values()].slice(0,20);
   if(!all.length){sg.style.display='none';return;}
   sg.innerHTML=all.map(r=>{
+    const lines=TABLERO.filter(t=>t.oc===r.oc);
     const tipo=getTipo(r.art,r.desc);
     const tar=calcTarimas(r.art,r.qty);
     return`<div class="oc-item" onclick="selectOC('${r.oc}','${ctx}')">
       <span style="font-weight:600;color:#1d4ed8;font-size:12px">OC ${r.oc}</span>
       <span class="tipo-tag ${tipo.cls}">${tipo.label}</span>
+      ${lines.length>1?`<span style="font-size:10px;background:#e0f2fe;color:#0369a1;padding:1px 6px;border-radius:4px;font-weight:600;margin-left:4px">${lines.length} partidas</span>`:''}
       ${tar?`<span style="font-size:10px;background:#fef9c3;color:#a16207;padding:1px 6px;border-radius:4px;font-weight:600;margin-left:4px">~${tar.tarimas} tar.</span>`:''}
       <div style="color:#64748b;font-size:11px;margin-top:2px">${r.prov}</div>
       <div style="color:#64748b;font-size:11px">${(r.desc||'').substring(0,55)}${(r.desc||'').length>55?'...':''}</div>
@@ -550,6 +553,8 @@ function selectOC(oc,ctx){
     document.getElementById('c-prov').textContent=lines[0].prov;
     document.getElementById('c-prov').classList.remove('pend');
     _tarEst=null; _kgLlegar=0;
+    // siempre mostrar líneas con kg a llegar si hay más de 1
+    // si es 1 sola línea mostrar campos simples
     if(lines.length===1){
       document.getElementById('multi-lines').style.display='none';
       fillComprasFields(lines[0]);
@@ -621,6 +626,18 @@ function pickLine(idx,oc){
   fillComprasFields(selectedLines[oc][idx]);
 }
 
+function recalcKgSingle(art){
+  const inp=document.getElementById('kg-single-input');
+  const q=parseFloat(inp.value||0);
+  const res=document.getElementById('kg-single-result');
+  if(q<=0){res.innerHTML='';_tarEst=null;_kgLlegar=0;return;}
+  const tar=calcTarimas(art,q.toString());
+  if(tar){
+    res.innerHTML=`<span style="font-size:13px;font-weight:700;color:#1d4ed8">${tar.tarimas}</span> <span style="font-size:12px;color:#64748b">tarimas estimadas · ${tar.presentacion}</span> <span style="font-size:10px;color:#94a3b8">| ${tar.detalle}</span>`;
+    _tarEst=tar.tarimas; _tarPres=tar.presentacion; _tarDet=tar.detalle; _kgLlegar=q;
+  } else { res.innerHTML=''; _tarEst=null; }
+}
+
 function recalcKg(oc){
   const inputs=document.querySelectorAll('.kg-input');
   let total=0, art='';
@@ -663,6 +680,22 @@ function fillComprasFields(line){
       <div style="font-size:10px;color:#94a3b8">${tar.detalle}</div>`;
     box.style.display='block';
   } else { box.style.display='none'; }
+
+  // campo kg a llegar para línea única
+  let kgBox=document.getElementById('kg-single');
+  if(!kgBox){
+    kgBox=document.createElement('div');
+    kgBox.id='kg-single';
+    kgBox.style.cssText='margin-top:10px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px 16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap';
+    box.parentNode.insertBefore(kgBox, box.nextSibling);
+  }
+  kgBox.innerHTML=`
+    <label style="font-size:12px;font-weight:600;color:#64748b">Kg a llegar en esta entrega:</label>
+    <input type="number" id="kg-single-input" class="kg-input" data-art="${line.art}" min="0" placeholder="0"
+      oninput="recalcKgSingle('${line.art}')">
+    <span style="font-size:12px;color:#64748b">kg</span>
+    <div id="kg-single-result" style="width:100%;margin-top:4px"></div>`;
+  kgBox.style.display='flex';
 }
 
 document.addEventListener('click',e=>{
