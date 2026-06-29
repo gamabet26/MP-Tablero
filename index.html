@@ -311,7 +311,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 </div>
 
 <!-- ═══ SPLASH ═══ -->
-<div id="splash" style="position:fixed;top:0;left:0;right:0;bottom:0;background:#050d1f;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;overflow:hidden">
+<div id="splash" style="position:fixed;top:0;left:0;right:0;bottom:0;background:#ffffff;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;overflow:hidden">
 
   <canvas id="splash-stars" style="position:absolute;inset:0;pointer-events:none"></canvas>
 
@@ -325,18 +325,18 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
       transform-style:preserve-3d;
       animation:zubexEntry 1.4s cubic-bezier(.22,1,.36,1) forwards, zubexFloat 5s ease-in-out 1.4s infinite;
       opacity:0;
-      color:#fff;
+      color:#0a1660;
       text-shadow:
-        1px 1px 0 #b8c8ff,
-        2px 2px 0 #8eaaff,
-        3px 3px 0 #6490ff,
-        4px 4px 0 #3a70ee,
-        5px 5px 0 #1a50cc,
-        6px 6px 0 #0a30a0,
-        7px 7px 0 #061e70,
-        0 12px 28px rgba(20,60,200,.65),
-        0 0 50px rgba(80,130,255,.35);
-      background:linear-gradient(160deg,#a0c0ff 0%,#fff 35%,#6090ff 65%,#1a3aaa 100%);
+        1px 1px 0 #c8d4f8,
+        2px 2px 0 #9aaee8,
+        3px 3px 0 #6680cc,
+        4px 4px 0 #3a50a0,
+        5px 5px 0 #1a307a,
+        6px 6px 0 #0a1a55,
+        7px 7px 0 #060f38,
+        0 12px 28px rgba(10,22,100,.25),
+        0 0 40px rgba(30,60,180,.12);
+      background:linear-gradient(160deg,#1a3aaa 0%,#0a1660 35%,#1a3aaa 65%,#050d40 100%);
       -webkit-background-clip:text;
       -webkit-text-fill-color:transparent;
       background-clip:text;
@@ -526,10 +526,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
     </g>
   </svg>
 
-  <p style="position:relative;z-index:2;font-size:12px;color:#4a5a8a;opacity:0;animation:fadeUp .7s ease-out 2s forwards">
+  <p style="position:relative;z-index:2;font-size:12px;color:#64748b;opacity:0;animation:fadeUp .7s ease-out 2s forwards">
     Sistema de Recibo de Materias Primas
   </p>
-  <button onclick="cerrarSplash()" style="position:relative;z-index:2;margin-top:10px;padding:11px 50px;background:linear-gradient(135deg,#1a1aaa,#2a50e0);color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;opacity:0;animation:fadeUp .7s ease-out 2.2s forwards;letter-spacing:1px;box-shadow:0 4px 24px rgba(26,26,170,.45)">
+  <button onclick="cerrarSplash()" style="position:relative;z-index:2;margin-top:10px;padding:11px 50px;background:#1a1aaa;color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;opacity:0;animation:fadeUp .7s ease-out 2.2s forwards;letter-spacing:1px;box-shadow:0 4px 20px rgba(26,26,170,.25)">
     Ingresar →
   </button>
 
