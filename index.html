@@ -5,6 +5,50 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Zubex – Recibo de Materias Primas</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css">
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import { getFirestore, collection, doc, setDoc, getDocs, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyDsgkenlCOso9CYDZ3m1i212tvdlbY4ZR0",
+    authDomain: "proyectos-zx1.firebaseapp.com",
+    databaseURL: "https://proyectos-zx1-default-rtdb.firebaseio.com",
+    projectId: "proyectos-zx1",
+    storageBucket: "proyectos-zx1.firebasestorage.app",
+    messagingSenderId: "142068344249",
+    appId: "1:142068344249:web:63831edb6f94d34fad4268"
+  };
+
+  const fbApp = initializeApp(firebaseConfig);
+  const db = getFirestore(fbApp);
+  const RECORDS_COL = collection(db, "zubex_rmp_records");
+
+  window.fbSaveRecord = async function(rec){
+    try{
+      await setDoc(doc(RECORDS_COL, rec.oc), rec, { merge: true });
+    }catch(e){ console.error("Error guardando en Firestore:", e); }
+  };
+
+  window.fbLoadAll = async function(){
+    try{
+      const snap = await getDocs(RECORDS_COL);
+      const arr = [];
+      snap.forEach(d => arr.push(d.data()));
+      return arr;
+    }catch(e){ console.error("Error cargando de Firestore:", e); return []; }
+  };
+
+  window.fbListen = function(callback){
+    onSnapshot(RECORDS_COL, (snap) => {
+      const arr = [];
+      snap.forEach(d => arr.push(d.data()));
+      callback(arr);
+    }, (err) => console.error("Error en listener:", err));
+  };
+
+  window._fbReady = true;
+  window.dispatchEvent(new Event('firebaseReady'));
+</script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f0f4f8;min-height:100vh;overflow-x:hidden}
@@ -189,7 +233,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
       <select id="c-unidad"><option value="">Seleccionar...</option><option>CHICO</option><option>GRANDE</option><option>TRAILER</option></select>
     </div>
   </div>
-  <button class="btn-save" onclick="guardarCompra()"><i class="ti ti-device-floppy"></i> Guardar y notificar</button>
+  <button class="btn-save" onclick="guardarCompra()" id="btn-guardar-compra"><i class="ti ti-device-floppy"></i> Guardar y notificar</button>
 </div>
 </div>
 
@@ -761,11 +805,38 @@ function calcTarimas(art,qty){
   return null;
 }
 
-// ═══ DB ═══
-const DB_KEY='zubex_rmp_v4';
+// ═══ DB (Firestore en tiempo real) ═══
 let records=[];
-try{records=JSON.parse(localStorage.getItem(DB_KEY)||'[]')}catch(e){}
-function saveDB(){localStorage.setItem(DB_KEY,JSON.stringify(records))}
+let fbInitialized=false;
+
+function initFirestore(){
+  if(fbInitialized) return;
+  fbInitialized=true;
+  if(window._fbReady){
+    window.fbListen(arr=>{
+      records=arr;
+      const histPanel=document.getElementById('panel-historial');
+      const calPanel=document.getElementById('panel-calendario');
+      if(histPanel&&histPanel.classList.contains('active')) renderLog();
+      if(calPanel&&calPanel.classList.contains('active')) renderCalendario();
+    });
+  } else {
+    window.addEventListener('firebaseReady', ()=>{
+      window.fbListen(arr=>{
+        records=arr;
+        const histPanel=document.getElementById('panel-historial');
+        const calPanel=document.getElementById('panel-calendario');
+        if(histPanel&&histPanel.classList.contains('active')) renderLog();
+        if(calPanel&&calPanel.classList.contains('active')) renderCalendario();
+      });
+    });
+  }
+}
+initFirestore();
+
+async function saveDB(rec){
+  if(window.fbSaveRecord){ await window.fbSaveRecord(rec); }
+}
 
 function nowTime(){return new Date().toTimeString().slice(0,5)}
 document.getElementById('hdr-date').textContent=new Date().toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'numeric'});
@@ -825,8 +896,16 @@ function switchTab(n){
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   document.getElementById('panel-'+n).classList.add('active');
   document.getElementById('tab-'+n).classList.add('active');
-  if(n==='historial') renderLog();
-  if(n==='calendario') renderCalendario();
+  if(n==='historial'){
+    if(!records.length && window.fbLoadAll){
+      window.fbLoadAll().then(arr=>{records=arr; renderLog();});
+    } else { renderLog(); }
+  }
+  if(n==='calendario'){
+    if(!records.length && window.fbLoadAll){
+      window.fbLoadAll().then(arr=>{records=arr; renderCalendario();});
+    } else { renderCalendario(); }
+  }
 }
 
 function mostrarLogin(seccion){
@@ -1113,13 +1192,13 @@ function toggleVigAcceso(planta){
 }
 
 // ═══ GUARDAR ═══
-function guardarCompra(){
+async function guardarCompra(){
   const oc=document.getElementById('c-oc').value.trim();
   if(!oc){alert('Ingresa el número de OC');return;}
   const art=document.getElementById('c-art').textContent.trim();
   const qty=document.getElementById('c-qty').textContent.trim();
   const tar=_tarEst?{tarimas:_tarEst,presentacion:_tarPres,detalle:_tarDet}:calcTarimas(art,qty);
-  const idx=records.findIndex(r=>r.oc===oc);
+  const existing=records.find(r=>r.oc===oc)||{};
   const rec={
     oc,art,qty,
     prov:document.getElementById('c-prov').textContent,
@@ -1134,45 +1213,51 @@ function guardarCompra(){
     tar_est:tar?tar.tarimas:'',
     tar_pres:tar?tar.presentacion:'',
     tar_det:tar?tar.detalle:'',
-    estado:'pendiente',reporte:'',entrada:'',salida:'',arranque:'',fin:'',
-    confirmacion:'',comentarios:''
+    estado:existing.estado||'pendiente',
+    reporte:existing.reporte||'',
+    entrada:existing.entrada||'',
+    salida:existing.salida||'',
+    arranque:existing.arranque||'',
+    fin:existing.fin||'',
+    confirmacion:existing.confirmacion||'',
+    comentarios:existing.comentarios||''
   };
-  if(idx>=0) records[idx]={...records[idx],...rec};
-  else records.push(rec);
-  saveDB();
+  await saveDB(rec);
   alert('✅ OC '+oc+' guardada correctamente.');
 }
 
-function guardarVigilancia(){
+async function guardarVigilancia(){
   const oc=document.getElementById('v-oc').value.trim();
   if(!oc){alert('Ingresa el número de OC');return;}
-  const idx=records.findIndex(r=>r.oc===oc);
-  if(idx<0){alert('OC no encontrada. Regístrala en Compras primero.');return;}
-  records[idx].reporte=stamps['reporte']||records[idx].reporte;
-  records[idx].entrada=stamps['entrada']||records[idx].entrada;
-  records[idx].salida=stamps['salida']||records[idx].salida;
-  records[idx].estado=records[idx].salida?'fuera':'dentro';
-  saveDB();
+  const existing=records.find(r=>r.oc===oc);
+  if(!existing){alert('OC no encontrada. Regístrala en Compras primero.');return;}
+  const rec={...existing};
+  rec.reporte=stamps['reporte']||rec.reporte;
+  rec.entrada=stamps['entrada']||rec.entrada;
+  rec.salida=stamps['salida']||rec.salida;
+  rec.estado=rec.salida?'fuera':'dentro';
+  await saveDB(rec);
   alert('✅ Acceso registrado para OC '+oc);
 }
 
-function guardarRecibo(){
+async function guardarRecibo(){
   const oc=document.getElementById('r-oc').value.trim();
   if(!oc){alert('Ingresa el número de OC');return;}
-  const idx=records.findIndex(r=>r.oc===oc);
-  if(idx<0){alert('OC no encontrada. Regístrala en Compras primero.');return;}
-  const prevArr=records[idx].arranque;
-  records[idx].arranque=stamps['arranque']||records[idx].arranque;
-  records[idx].fin=stamps['fin']||records[idx].fin;
-  records[idx].confirmacion=document.getElementById('q-conf').value;
-  records[idx].comentarios=document.getElementById('r-coments').value;
-  records[idx].estado='recibido';
-  if(!records[idx].tar_est&&records[idx].art){
-    const tar=calcTarimas(records[idx].art,records[idx].qty);
-    if(tar){records[idx].tar_est=tar.tarimas;records[idx].tar_pres=tar.presentacion;}
+  const existing=records.find(r=>r.oc===oc);
+  if(!existing){alert('OC no encontrada. Regístrala en Compras primero.');return;}
+  const rec={...existing};
+  const prevArr=rec.arranque;
+  rec.arranque=stamps['arranque']||rec.arranque;
+  rec.fin=stamps['fin']||rec.fin;
+  rec.confirmacion=document.getElementById('q-conf').value;
+  rec.comentarios=document.getElementById('r-coments').value;
+  rec.estado='recibido';
+  if(!rec.tar_est&&rec.art){
+    const tar=calcTarimas(rec.art,rec.qty);
+    if(tar){rec.tar_est=tar.tarimas;rec.tar_pres=tar.presentacion;}
   }
-  saveDB();
-  if(!prevArr&&records[idx].arranque) switchTab('historial');
+  await saveDB(rec);
+  if(!prevArr&&rec.arranque) switchTab('historial');
   else alert('✅ Recibo confirmado para OC '+oc);
 }
 
