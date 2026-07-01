@@ -143,6 +143,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
   <div class="tab" onclick="switchTab('recibo')" id="tab-recibo"><i class="ti ti-package"></i> Recibo MP</div>
   <div class="tab" onclick="switchTab('calendario')" id="tab-calendario"><i class="ti ti-calendar-month"></i> Calendario</div>
   <div class="tab" onclick="switchTab('historial')" id="tab-historial"><i class="ti ti-history"></i> Historial</div>
+  <div class="tab" onclick="switchTab('log')" id="tab-log"><i class="ti ti-clipboard-list"></i> Log</div>
 </div>
 
 <div class="content">
@@ -705,7 +706,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
           <th style="padding:12px 8px;text-align:left;font-weight:700;color:#7a9cd0;white-space:nowrap">⏱ DESCARGA</th>
           <th style="padding:12px 8px;text-align:left;font-weight:700;color:#7a9cd0;white-space:nowrap">📦 EST. TARIMAS</th>
           <th style="padding:12px 8px;text-align:left;font-weight:700;color:#7a9cd0;white-space:nowrap">CONF.</th>
-          <th style="padding:12px 8px;text-align:left;font-weight:700;color:#7a9cd0;white-space:nowrap">ESTADO</th>
+      <th style="padding:12px 8px;text-align:left;font-weight:700;color:#7a9cd0;white-space:nowrap">ESTADO</th>
+          <th style="padding:12px 8px;text-align:left;font-weight:700;color:#7a9cd0;white-space:nowrap">ACCIONES</th>
         </tr>
       </thead>
       <tbody id="log-body"></tbody>
@@ -805,37 +807,48 @@ function calcTarimas(art,qty){
   return null;
 }
 
-// ═══ DB (Firestore en tiempo real) ═══
+// ═══ DB (Firestore + localStorage como respaldo) ═══
 let records=[];
 let fbInitialized=false;
+const LS_KEY='zubex_rmp_backup';
+
+// cargar respaldo local inmediatamente
+try{
+  const local=JSON.parse(localStorage.getItem(LS_KEY)||'[]');
+  if(local.length) records=local;
+}catch(e){}
 
 function initFirestore(){
   if(fbInitialized) return;
   fbInitialized=true;
-  if(window._fbReady){
+  const startListener=()=>{
     window.fbListen(arr=>{
-      records=arr;
+      if(arr.length){
+        records=arr;
+        // guardar copia local como respaldo
+        try{localStorage.setItem(LS_KEY,JSON.stringify(arr))}catch(e){}
+      }
       const histPanel=document.getElementById('panel-historial');
       const calPanel=document.getElementById('panel-calendario');
       if(histPanel&&histPanel.classList.contains('active')) renderLog();
       if(calPanel&&calPanel.classList.contains('active')) renderCalendario();
     });
-  } else {
-    window.addEventListener('firebaseReady', ()=>{
-      window.fbListen(arr=>{
-        records=arr;
-        const histPanel=document.getElementById('panel-historial');
-        const calPanel=document.getElementById('panel-calendario');
-        if(histPanel&&histPanel.classList.contains('active')) renderLog();
-        if(calPanel&&calPanel.classList.contains('active')) renderCalendario();
-      });
-    });
-  }
+  };
+  if(window._fbReady) startListener();
+  else window.addEventListener('firebaseReady', startListener);
 }
 initFirestore();
 
 async function saveDB(rec){
-  if(window.fbSaveRecord){ await window.fbSaveRecord(rec); }
+  // guardar en localStorage inmediatamente
+  const idx=records.findIndex(r=>r.oc===rec.oc);
+  if(idx>=0) records[idx]=rec; else records.push(rec);
+  try{localStorage.setItem(LS_KEY,JSON.stringify(records))}catch(e){}
+  // intentar guardar en Firestore
+  if(window.fbSaveRecord){
+    try{ await window.fbSaveRecord(rec); }
+    catch(e){ console.warn('Firestore no disponible, guardado solo local:', e); }
+  }
 }
 
 function nowTime(){return new Date().toTimeString().slice(0,5)}
@@ -850,7 +863,155 @@ function stampTime(id){
   if(el) el.textContent=t;
 }
 
-// ═══ CALENDARIO ═══
+// ═══ LOG DE MODIFICACIONES ═══
+let logMods=[];
+const LOG_KEY='zubex_rmp_log';
+try{logMods=JSON.parse(localStorage.getItem(LOG_KEY)||'[]')}catch(e){}
+
+function saveLog(){
+  try{localStorage.setItem(LOG_KEY,JSON.stringify(logMods))}catch(e){}
+  if(window.fbSaveRecord){
+    window.fbSaveRecord({oc:'__log__', entries: logMods}).catch(e=>console.warn(e));
+  }
+}
+
+function addLog(tipo, oc, prov, detalle){
+  const now=new Date();
+  logMods.unshift({
+    ts: now.toISOString(),
+    fecha: now.toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'numeric'}),
+    hora: now.toTimeString().slice(0,5),
+    tipo, oc, prov, detalle
+  });
+  saveLog();
+}
+
+function renderLogMod(){
+  const filtOC=(document.getElementById('log-filter-oc').value||'').toLowerCase();
+  const filtTipo=document.getElementById('log-filter-tipo').value||'';
+  const tbody=document.getElementById('log-mod-body');
+  let filtered=logMods.filter(l=>{
+    if(filtOC && !l.oc.toLowerCase().includes(filtOC)) return false;
+    if(filtTipo && l.tipo!==filtTipo) return false;
+    return true;
+  });
+  if(!filtered.length){
+    tbody.innerHTML='<tr><td colspan="5" style="text-align:center;color:#94a3b8;padding:24px;font-size:13px">Sin registros en el log.</td></tr>';
+    return;
+  }
+  const colTipo={nueva:'#dcfce7|#15803d|📥 Nueva OC', edicion:'#dbeafe|#1d4ed8|✏️ Edición', eliminacion:'#fee2e2|#b91c1c|🗑️ Eliminación'};
+  tbody.innerHTML=filtered.map((l,i)=>{
+    const[bg,tc,label]=( colTipo[l.tipo]||'#f1f5f9|#475569|📋 Evento').split('|');
+    return`<tr style="border-bottom:1px solid #f1f5f9;${i%2===0?'':'background:#f8fafc'}">
+      <td style="padding:12px 14px;font-size:13px;white-space:nowrap;color:#1e293b">${l.fecha} <strong>${l.hora}</strong></td>
+      <td style="padding:12px 14px"><span style="background:${bg};color:${tc};padding:3px 10px;border-radius:99px;font-size:11px;font-weight:700">${label}</span></td>
+      <td style="padding:12px 14px;font-size:14px;font-weight:700;color:#1d4ed8">${l.oc}</td>
+      <td style="padding:12px 14px;font-size:13px;color:#475569;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${l.prov||'—'}</td>
+      <td style="padding:12px 14px;font-size:12px;color:#64748b">${l.detalle}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ═══ EDITAR / ELIMINAR ═══
+let _pendingAction=null; // {type:'edit'|'delete', oc}
+let _editSnapshot=null;  // copia antes de editar
+
+function pedirPassAccion(type, oc){
+  _pendingAction={type, oc};
+  const titles={edit:'Editar OC '+oc, delete:'Eliminar OC '+oc};
+  document.getElementById('pass-modal-title').textContent='🔐 '+titles[type];
+  document.getElementById('pass-input').value='';
+  document.getElementById('pass-error').style.display='none';
+  document.getElementById('pass-modal').style.display='flex';
+  setTimeout(()=>document.getElementById('pass-input').focus(),100);
+}
+
+function confirmarPass(){
+  const p=document.getElementById('pass-input').value;
+  if(p!=='zx2026c'){
+    document.getElementById('pass-error').style.display='block';
+    document.getElementById('pass-input').value='';
+    return;
+  }
+  document.getElementById('pass-modal').style.display='none';
+  if(_pendingAction.type==='edit') abrirEdicion(_pendingAction.oc);
+  if(_pendingAction.type==='delete') ejecutarEliminacion(_pendingAction.oc);
+  _pendingAction=null;
+}
+
+function abrirEdicion(oc){
+  const rec=records.find(r=>r.oc===oc);
+  if(!rec) return;
+  _editSnapshot={...rec};
+  document.getElementById('edit-oc-title').textContent=oc;
+  document.getElementById('edit-prov').value=rec.prov||'';
+  document.getElementById('edit-desc').value=rec.desc||'';
+  document.getElementById('edit-fecha').value=rec.fecha||'';
+  document.getElementById('edit-hora').value=rec.hora||'';
+  document.getElementById('edit-planta').value=rec.planta||'';
+  document.getElementById('edit-unidad').value=rec.unidad||'';
+  document.getElementById('edit-semana').value=rec.semana||'';
+  document.getElementById('edit-mes').value=rec.mes||'';
+  document.getElementById('edit-kg').value=rec.kg_llegar||'';
+  document.getElementById('edit-modal').style.display='flex';
+}
+
+async function confirmarEdicion(){
+  const oc=document.getElementById('edit-oc-title').textContent;
+  const rec=records.find(r=>r.oc===oc);
+  if(!rec) return;
+  const campos={
+    prov:'Proveedor', desc:'Descripción', fecha:'Fecha llegada',
+    hora:'Hora', planta:'Planta', unidad:'Unidad',
+    semana:'Semana', mes:'Mes', kg_llegar:'Cantidad por llegar'
+  };
+  const vals={
+    prov: document.getElementById('edit-prov').value,
+    desc: document.getElementById('edit-desc').value,
+    fecha: document.getElementById('edit-fecha').value,
+    hora: document.getElementById('edit-hora').value,
+    planta: document.getElementById('edit-planta').value,
+    unidad: document.getElementById('edit-unidad').value,
+    semana: document.getElementById('edit-semana').value,
+    mes: document.getElementById('edit-mes').value,
+    kg_llegar: document.getElementById('edit-kg').value
+  };
+  // detectar cambios
+  const cambios=[];
+  Object.keys(vals).forEach(k=>{
+    const vOld=String(_editSnapshot[k]||'');
+    const vNew=String(vals[k]||'');
+    if(vOld!==vNew) cambios.push(`${campos[k]}: "${vOld}" → "${vNew}"`);
+  });
+  // aplicar cambios
+  Object.assign(rec, vals);
+  await saveDB(rec);
+  document.getElementById('edit-modal').style.display='none';
+  // log
+  if(cambios.length){
+    addLog('edicion', oc, rec.prov, cambios.join(' | '));
+  }
+  renderLog();
+  alert('✅ OC '+oc+' actualizada.');
+}
+
+async function ejecutarEliminacion(oc){
+  const rec=records.find(r=>r.oc===oc);
+  if(!rec) return;
+  if(!confirm(`¿Confirmas eliminar la OC ${oc} — ${rec.prov}?\nEsta acción no se puede deshacer.`)) return;
+  // log antes de eliminar
+  addLog('eliminacion', oc, rec.prov, `OC eliminada. Proveedor: ${rec.prov} | Producto: ${rec.desc} | Fecha: ${rec.fecha}`);
+  // eliminar del array local
+  const idx=records.findIndex(r=>r.oc===oc);
+  if(idx>=0) records.splice(idx,1);
+  try{localStorage.setItem(LS_KEY,JSON.stringify(records))}catch(e){}
+  // eliminar de Firestore
+  if(window._db && window._fbDeleteRecord){
+    await window._fbDeleteRecord(oc);
+  }
+  renderLog();
+  alert('🗑️ OC '+oc+' eliminada.');
+}
 let calBase = new Date();
 calBase.setDate(1);
 
@@ -898,14 +1059,15 @@ function switchTab(n){
   document.getElementById('tab-'+n).classList.add('active');
   if(n==='historial'){
     if(!records.length && window.fbLoadAll){
-      window.fbLoadAll().then(arr=>{records=arr; renderLog();});
+      window.fbLoadAll().then(arr=>{records=arr.filter(r=>r.oc!=='__log__'); renderLog();});
     } else { renderLog(); }
   }
   if(n==='calendario'){
     if(!records.length && window.fbLoadAll){
-      window.fbLoadAll().then(arr=>{records=arr; renderCalendario();});
+      window.fbLoadAll().then(arr=>{records=arr.filter(r=>r.oc!=='__log__'); renderCalendario();});
     } else { renderCalendario(); }
   }
+  if(n==='log') renderLogMod();
 }
 
 function mostrarLogin(seccion){
@@ -1222,7 +1384,13 @@ async function guardarCompra(){
     confirmacion:existing.confirmacion||'',
     comentarios:existing.comentarios||''
   };
+  const esNueva=!records.find(r=>r.oc===oc);
   await saveDB(rec);
+  addLog(esNueva?'nueva':'edicion', oc, rec.prov,
+    esNueva
+      ? `Nueva OC registrada. Proveedor: ${rec.prov} | Producto: ${rec.desc} | Fecha: ${rec.fecha} | Planta: ${rec.planta}`
+      : `OC actualizada desde Compras. Fecha: ${rec.fecha} | Planta: ${rec.planta} | Unidad: ${rec.unidad}`
+  );
   alert('✅ OC '+oc+' guardada correctamente.');
 }
 
@@ -1323,6 +1491,10 @@ function renderLog(){
       <td style="padding:14px 8px">${tarCell}</td>
       <td style="padding:14px 8px;font-weight:600">${r.confirmacion||'—'}</td>
       <td style="padding:14px 8px"><span class="pill ${pm[r.estado]||'p-p'}">${r.estado||'pendiente'}</span></td>
+      <td style="padding:14px 8px;white-space:nowrap">
+        <button onclick="pedirPassAccion('edit','${r.oc}')" style="padding:5px 10px;background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;border-radius:6px;cursor:pointer;font-size:12px;font-family:inherit;margin-right:4px">✏️ Editar</button>
+        <button onclick="pedirPassAccion('delete','${r.oc}')" style="padding:5px 10px;background:#fee2e2;color:#b91c1c;border:1px solid #fecaca;border-radius:6px;cursor:pointer;font-size:12px;font-family:inherit">🗑️</button>
+      </td>
     </tr>`;
   }).join('');
   const activos=filtered.filter(r=>r.arranque&&!r.fin);
