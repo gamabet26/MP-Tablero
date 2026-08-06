@@ -19,11 +19,9 @@ const fbApp = initializeApp({
 const db = getFirestore(fbApp);
 const RECORDS_COL = collection(db, "zubex_rmp_records");
 const LOGS_COL    = collection(db, "zubex_rmp_logs");
-
 window.fbSave = async (rec) => { await setDoc(doc(RECORDS_COL, rec.oc), rec, {merge:true}); };
 window.fbDelete = async (oc) => { await deleteDoc(doc(RECORDS_COL, oc)); };
 window.fbSaveLog = async (entry) => { await setDoc(doc(LOGS_COL, entry.id), entry); };
-
 onSnapshot(RECORDS_COL, snap => {
   window._records = [];
   snap.forEach(d => window._records.push(d.data()));
@@ -59,13 +57,15 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .fl input,.fl select,.fl textarea{font-size:13px;padding:7px 10px;border:1px solid #cbd5e1;border-radius:8px;background:#fff;color:#1e293b;outline:none;font-family:inherit}
 .fl input:focus,.fl select:focus{border-color:#3b82f6}
 .fl textarea{resize:vertical;min-height:60px}
-.ro{background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:7px 10px;font-size:13px;color:#64748b;min-height:34px}
+.ro{background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:7px 10px;font-size:13px;color:#1e293b;min-height:34px}
 .ro.pend{color:#94a3b8;font-style:italic;font-size:12px}
 .card{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:16px;margin-bottom:16px;box-shadow:0 1px 3px rgba(0,0,0,.05)}
 .ts-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px}
 .btn-ts{display:flex;align-items:center;gap:8px;padding:9px 14px;border-radius:8px;border:1px solid #cbd5e1;background:#fff;color:#1e293b;cursor:pointer;font-size:12px;font-family:inherit;transition:all .15s;width:100%}
-.btn-ts:hover{background:#f8fafc}.btn-ts.stamped{border-color:#16a34a;background:#f0fdf4;color:#15803d}
+.btn-ts:hover{background:#f8fafc}
+.btn-ts.stamped{border-color:#16a34a;background:#f0fdf4;color:#15803d}
 .btn-ts .tt{margin-left:auto;font-size:11px;color:#16a34a;font-weight:600}
+.btn-ts-clear{padding:4px 8px;background:#fee2e2;color:#b91c1c;border:1px solid #fecaca;border-radius:6px;cursor:pointer;font-size:11px;font-family:inherit;margin-top:4px;display:none;width:100%}
 .btn-save{width:100%;padding:10px;background:#1a3a8f;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;font-family:inherit;transition:background .2s;margin-top:6px}
 .btn-save:hover{background:#2a4db5}
 .oc-suggest{position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid #cbd5e1;border-radius:8px;z-index:100;max-height:280px;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,.12);margin-top:2px}
@@ -76,15 +76,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .tag-emp{background:#ecfdf5;color:#065f46}.tag-sol{background:#fff7ed;color:#9a3412}
 .tag-adit{background:#f0fdf4;color:#166534}.tag-otro{background:#f1f5f9;color:#475569}
 .tipo-tag{display:inline-block;padding:1px 7px;border-radius:4px;font-size:10px;font-weight:600;margin-left:4px;vertical-align:middle}
-.multi-row{background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px 14px;margin-bottom:8px;cursor:pointer;transition:all .15s}
-.multi-row:hover{border-color:#93c5fd;background:#eff6ff}.sel-row{border:2px solid #3b82f6!important;background:#eff6ff!important}
+.multi-row{background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px 14px;margin-bottom:8px;transition:all .15s}
+.multi-row:hover{border-color:#93c5fd;background:#eff6ff}
+.sel-row{border:2px solid #3b82f6!important;background:#eff6ff!important}
 .info-note{background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:8px 12px;font-size:11px;color:#1d4ed8;display:flex;align-items:flex-start;gap:6px}
 .pill{display:inline-block;padding:4px 12px;border-radius:99px;font-size:12px;font-weight:700}
 .p-d{background:#dcfce7;color:#15803d}.p-f{background:#fee2e2;color:#b91c1c}
 .p-r{background:#dbeafe;color:#1d4ed8}.p-p{background:#fef9c3;color:#a16207}
-.tar-box{background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:10px 14px;margin-bottom:14px}
-.kg-input{width:110px;padding:7px 10px;border:1px solid #cbd5e1;border-radius:8px;font-size:13px;font-family:inherit;outline:none}
-.kg-input:focus{border-color:#3b82f6}
 .modal-overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);z-index:1000;align-items:center;justify-content:center}
 .modal-box{background:#fff;border-radius:14px;padding:24px 28px;box-shadow:0 20px 60px rgba(0,0,0,.3)}
 .btn-accion{padding:6px 12px;border-radius:6px;cursor:pointer;font-size:12px;font-family:inherit;font-weight:600;border:1px solid}
@@ -92,10 +90,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .btn-del{background:#fee2e2;color:#b91c1c;border-color:#fecaca}
 .tbl{width:100%;border-collapse:collapse}
 .tbl th{background:#0d1f42;color:#7a9cd0;padding:12px 10px;text-align:left;font-size:12px;font-weight:700;white-space:nowrap;border-bottom:2px solid #1a3a8f}
-.tbl td{padding:13px 10px;border-bottom:1px solid #f1f5f9;color:#1e293b;font-size:13px;vertical-align:middle}
-.tbl tr:hover td{background:#f8fafc}
+.tbl td{padding:12px 10px;border-bottom:1px solid #f1f5f9;color:#1e293b;font-size:13px;vertical-align:middle}
+.tbl tr:hover td{background:#f0f6ff}
 .tbl tr:nth-child(even) td{background:#f9fafb}
 .tbl tr:nth-child(even):hover td{background:#f0f6ff}
+.oc-link{color:#1d4ed8;font-weight:700;cursor:pointer;text-decoration:underline;text-decoration-style:dotted}
+.oc-link:hover{color:#1e40af}
 </style>
 </head>
 <body>
@@ -103,7 +103,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 <!-- SPLASH -->
 <div id="splash" style="position:fixed;top:0;left:0;right:0;bottom:0;background:#fff;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;overflow:hidden">
   <div style="position:relative;z-index:2;perspective:800px;text-align:center">
-    <div style="font-family:'Arial Black',Impact,sans-serif;font-weight:900;font-size:clamp(64px,11vw,108px);letter-spacing:6px;transform-style:preserve-3d;animation:zubexEntry 1.4s cubic-bezier(.22,1,.36,1) forwards,zubexFloat 5s ease-in-out 1.4s infinite;opacity:0;background:linear-gradient(160deg,#1a3aaa 0%,#0a1660 35%,#1a3aaa 65%,#050d40 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;text-shadow:none;filter:drop-shadow(0 6px 16px rgba(10,22,100,.2))">zubex</div>
+    <div style="font-family:'Arial Black',Impact,sans-serif;font-weight:900;font-size:clamp(64px,11vw,108px);letter-spacing:6px;transform-style:preserve-3d;animation:zubexEntry 1.4s cubic-bezier(.22,1,.36,1) forwards,zubexFloat 5s ease-in-out 1.4s infinite;opacity:0;background:linear-gradient(160deg,#1a3aaa 0%,#0a1660 35%,#1a3aaa 65%,#050d40 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;filter:drop-shadow(0 6px 16px rgba(10,22,100,.2))">zubex</div>
     <div style="height:2px;background:linear-gradient(90deg,transparent,#1a3aaa,#3b5fe0,#1a3aaa,transparent);opacity:0;animation:fadeUp .6s ease-out 1.6s forwards;border-radius:2px"></div>
     <div style="font-family:'Arial Black',sans-serif;font-weight:700;font-size:clamp(11px,2vw,17px);letter-spacing:9px;color:#1a3aaa;margin-top:6px;opacity:0;animation:fadeUp .7s ease-out 1.8s forwards">MATERIAS PRIMAS</div>
   </div>
@@ -116,36 +116,29 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
     <circle cx="300" cy="14" r="3" fill="#6b8ef0" class="glow" style="animation-delay:.4s"/><circle cx="300" cy="166" r="3" fill="#6b8ef0" class="glow" style="animation-delay:1.2s"/>
   </svg>
   <svg width="360" height="120" viewBox="0 0 360 120" style="position:relative;z-index:2;margin-top:4px">
-    <defs><style>.fk{animation:fkD 5s linear infinite}@keyframes fkD{0%{transform:translateX(380px)}100%{transform:translateX(-220px)}}.whl{animation:wS .45s linear infinite;transform-box:fill-box;transform-origin:center}@keyframes wS{to{transform:rotate(360deg)}}.palG{animation:palL 5s linear infinite}@keyframes palL{0%,15%{transform:translateY(0)}35%,65%{transform:translateY(-20px)}85%,100%{transform:translateY(0)}}.exh{animation:puff 1.2s ease-out infinite}@keyframes puff{0%{opacity:.7;transform:translateY(0) scale(1)}100%{opacity:0;transform:translateY(-14px) scale(2)}}.exh2{animation:puff 1.2s ease-out .4s infinite}.flD{animation:flS 1s linear infinite}@keyframes flS{from{stroke-dashoffset:0}to{stroke-dashoffset:-40}}.lB{animation:blnk 2s ease-in-out infinite}@keyframes blnk{0%,100%{opacity:.3}50%{opacity:.8}}</style>
+    <defs><style>.fk{animation:fkD 5s linear infinite}@keyframes fkD{0%{transform:translateX(380px)}100%{transform:translateX(-220px)}}.whl{animation:wS .45s linear infinite;transform-box:fill-box;transform-origin:center}@keyframes wS{to{transform:rotate(360deg)}}.palG{animation:palL 5s linear infinite}@keyframes palL{0%,15%{transform:translateY(0)}35%,65%{transform:translateY(-20px)}85%,100%{transform:translateY(0)}}.exh{animation:puff 1.2s ease-out infinite}@keyframes puff{0%{opacity:.7;transform:translateY(0) scale(1)}100%{opacity:0;transform:translateY(-14px) scale(2)}}.exh2{animation:puff 1.2s ease-out .4s infinite}.flD{animation:flS 1s linear infinite}@keyframes flS{from{stroke-dashoffset:0}to{stroke-dashoffset:-40}}</style>
     <linearGradient id="bG" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#2244cc"/><stop offset="100%" stop-color="#0d1a80"/></linearGradient>
     <linearGradient id="cG" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#1a3299"/><stop offset="100%" stop-color="#0a1560"/></linearGradient></defs>
     <rect x="0" y="104" width="360" height="16" fill="#e2e8f0"/><line x1="0" y1="104" x2="360" y2="104" stroke="#cbd5e1" stroke-width="2"/>
     <line class="flD" x1="0" y1="110" x2="360" y2="110" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="22 18" opacity=".5"/>
     <g class="fk">
-      <ellipse cx="66" cy="106" rx="62" ry="4" fill="#000" opacity=".2"/>
+      <ellipse cx="66" cy="106" rx="62" ry="4" fill="#000" opacity=".15"/>
       <rect x="6" y="66" width="18" height="36" rx="3" fill="#080f40"/>
-      <rect x="8" y="70" width="14" height="4" rx="1" fill="#0d1a60"/><rect x="8" y="78" width="14" height="4" rx="1" fill="#0d1a60"/><rect x="8" y="86" width="14" height="4" rx="1" fill="#0d1a60"/>
       <rect x="20" y="56" width="76" height="48" rx="5" fill="url(#bG)"/>
-      <rect x="24" y="62" width="28" height="6" rx="2" fill="#1a2a80" opacity=".6"/><rect x="24" y="72" width="20" height="6" rx="2" fill="#1a2a80" opacity=".6"/>
       <rect x="56" y="60" width="40" height="12" rx="2" fill="#0a1560" opacity=".5"/>
       <rect x="58" y="62" width="8" height="8" rx="1" fill="#fbbf24" opacity=".7"/><rect x="68" y="62" width="8" height="8" rx="1" fill="#60a5fa" opacity=".6"/><rect x="78" y="62" width="8" height="8" rx="1" fill="#34d399" opacity=".6"/>
       <rect x="68" y="34" width="34" height="28" rx="4" fill="url(#cG)"/>
       <rect x="72" y="38" width="24" height="18" rx="3" fill="#1e40af" opacity=".75"/>
-      <rect x="73" y="39" width="8" height="5" rx="1" fill="#93c5fd" opacity=".4"/>
       <circle cx="82" cy="44" r="5.5" fill="#fbbf24"/>
       <path d="M76.5 42 Q82 36 87.5 42" fill="#f59e0b" stroke="#d97706" stroke-width=".5"/>
       <rect x="78" y="49" width="8" height="9" rx="2" fill="#3b82f6"/>
-      <circle cx="76" cy="53" r="2" fill="#fbbf24"/><circle cx="88" cy="53" r="2" fill="#fbbf24"/>
       <rect x="96" y="24" width="6" height="78" rx="2" fill="#475569"/><rect x="104" y="24" width="5" height="78" rx="2" fill="#334155"/>
-      <line x1="97" y1="28" x2="97" y2="98" stroke="#64748b" stroke-width="1" stroke-dasharray="4 4"/>
       <rect x="108" y="82" width="44" height="5" rx="1.5" fill="#94a3b8"/><rect x="108" y="91" width="44" height="5" rx="1.5" fill="#94a3b8"/>
-      <polygon points="152,82 158,84.5 152,87" fill="#cbd5e1"/><polygon points="152,91 158,93.5 152,96" fill="#cbd5e1"/>
       <circle cx="32" cy="104" r="12" fill="#0f172a"/><circle cx="32" cy="104" r="8" fill="#1e293b" class="whl"/><circle cx="32" cy="104" r="4" fill="#334155" class="whl"/><circle cx="32" cy="104" r="2" fill="#64748b"/>
       <line x1="32" y1="96" x2="32" y2="112" stroke="#475569" stroke-width="1.5" class="whl"/><line x1="24" y1="104" x2="40" y2="104" stroke="#475569" stroke-width="1.5" class="whl"/>
       <circle cx="90" cy="104" r="12" fill="#0f172a"/><circle cx="90" cy="104" r="8" fill="#1e293b" class="whl"/><circle cx="90" cy="104" r="4" fill="#334155" class="whl"/><circle cx="90" cy="104" r="2" fill="#64748b"/>
       <line x1="90" y1="96" x2="90" y2="112" stroke="#475569" stroke-width="1.5" class="whl"/><line x1="82" y1="104" x2="98" y2="104" stroke="#475569" stroke-width="1.5" class="whl"/>
       <circle cx="103" cy="72" r="5" fill="#fef9c3"/><circle cx="103" cy="72" r="3" fill="#fef08a"/>
-      <polygon class="lB" points="108,70 130,62 130,82 108,74" fill="#fef9c3" opacity=".25"/>
       <circle class="exh" cx="22" cy="58" r="3" fill="#94a3b8"/><circle class="exh2" cx="22" cy="58" r="2.5" fill="#cbd5e1"/>
       <g class="palG">
         <rect x="109" y="56" width="44" height="5" rx="1" fill="#a16207"/>
@@ -153,7 +146,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
         <line x1="119" y1="56" x2="119" y2="66" stroke="#92400e" stroke-width="2"/><line x1="131" y1="56" x2="131" y2="66" stroke="#92400e" stroke-width="2"/><line x1="143" y1="56" x2="143" y2="66" stroke="#92400e" stroke-width="2"/>
         <rect x="111" y="36" width="20" height="22" rx="2" fill="#dbeafe"/><rect x="111" y="36" width="20" height="22" rx="2" fill="none" stroke="#3b82f6" stroke-width="1.5"/>
         <text x="121" y="49" text-anchor="middle" font-size="5.5" font-weight="900" fill="#1a1aaa" font-family="Arial Black,sans-serif">ZUBEX</text>
-        <line x1="111" y1="43" x2="131" y2="43" stroke="#3b82f6" stroke-width=".8"/>
         <rect x="131" y="40" width="20" height="18" rx="2" fill="#ede9fe"/><rect x="131" y="40" width="20" height="18" rx="2" fill="none" stroke="#7c3aed" stroke-width="1.5"/>
         <text x="141" y="51" text-anchor="middle" font-size="5" font-weight="900" fill="#4c1d95" font-family="Arial Black,sans-serif">MP</text>
       </g>
@@ -183,7 +175,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
   </div>
 </div>
 
-<!-- PASS MODAL (editar/eliminar) -->
+<!-- PASS MODAL -->
 <div id="pass-modal" class="modal-overlay">
   <div class="modal-box" style="width:300px">
     <h3 id="pass-titulo" style="font-size:15px;font-weight:700;color:#1e293b;margin-bottom:4px"></h3>
@@ -214,8 +206,20 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
       <div class="fl"><label>Semana</label><input type="number" id="edit-semana" min="1" max="53"></div>
       <div class="fl"><label>Mes</label><select id="edit-mes"><option value="">Mes...</option><option>ENE</option><option>FEB</option><option>MAR</option><option>ABR</option><option>MAY</option><option>JUN</option><option>JUL</option><option>AGO</option><option>SEP</option><option>OCT</option><option>NOV</option><option>DIC</option></select></div>
       <div class="fl"><label>Cantidad por llegar</label><input type="number" id="edit-kg" min="0"></div>
+      <div class="fl"><label>Tarimas estimadas</label><input type="number" id="edit-tarimas" min="0" placeholder="Ej. 12"></div>
     </div>
     <button onclick="confirmarEdicion()" class="btn-save"><i class="ti ti-device-floppy"></i> Guardar cambios</button>
+  </div>
+</div>
+
+<!-- MODAL DETALLE OC -->
+<div id="oc-detail-modal" class="modal-overlay">
+  <div class="modal-box" style="max-width:700px;width:95%;max-height:90vh;overflow-y:auto">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <h3 id="oc-detail-title" style="font-size:16px;font-weight:700;color:#1e293b"></h3>
+      <button onclick="document.getElementById('oc-detail-modal').style.display='none'" style="border:none;background:none;cursor:pointer;font-size:20px;color:#94a3b8">✕</button>
+    </div>
+    <div id="oc-detail-body"></div>
   </div>
 </div>
 
@@ -252,37 +256,42 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
   <div class="fg">
     <div class="fl">
       <label>OC # <span style="color:#3b82f6;font-size:10px">(Tablero MP)</span></label>
-      <div class="oc-wrap"><input type="text" id="c-oc" placeholder="Ej. 83896 o SAYER..." oninput="buscarOC(this.value,'compras')" autocomplete="off"><div class="oc-suggest" id="oc-suggest" style="display:none"></div></div>
+      <div class="oc-wrap"><input type="text" id="c-oc" placeholder="Ej. 83896 o nombre proveedor..." oninput="buscarOC(this.value,'compras')" autocomplete="off"><div class="oc-suggest" id="oc-suggest" style="display:none"></div></div>
     </div>
-    <div class="fl"><label>Proveedor</label><div class="ro pend" id="c-prov">— se carga al ingresar OC</div></div>
+    <div class="fl"><label>Proveedor</label><div class="ro pend" id="c-prov">—</div></div>
   </div>
+
+  <!-- Líneas múltiples -->
   <div id="multi-lines" style="display:none;margin-bottom:12px">
-    <div class="sec">Líneas de esta OC — ingresa cantidad por llegar por partida</div>
+    <div class="sec">Partidas de esta OC — ingresa cantidad por llegar por partida</div>
     <div id="lines-container"></div>
     <div id="kg-resumen" style="display:none;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:14px 16px;margin-top:10px">
       <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
         <div><div style="font-size:11px;font-weight:600;color:#1d4ed8;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Total cantidad a llegar</div><div style="font-size:18px;font-weight:700;color:#1e293b" id="kg-total-display">0</div></div>
-        <div style="text-align:right"><div style="font-size:11px;font-weight:600;color:#1d4ed8;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">📦 Est. Tarimas</div><div><span id="kg-tar-num" style="font-size:32px;font-weight:700;color:#1d4ed8">—</span> <span style="font-size:13px;color:#64748b">tarimas</span></div><div id="kg-tar-det" style="font-size:10px;color:#94a3b8;margin-top:2px"></div></div>
       </div>
     </div>
   </div>
+
+  <!-- Campos línea única -->
   <div id="c-fields" style="display:none">
     <div class="fg">
       <div class="fl"><label>Número de artículo</label><div class="ro" id="c-art">—</div></div>
-      <div class="fl"><label>Descripción</label><div class="ro" id="c-desc">—</div></div>
+      <div class="fl"><label>Descripción del producto</label><div class="ro" id="c-desc">—</div></div>
       <div class="fl"><label>Cantidad OC</label><div class="ro" id="c-qty">—</div></div>
-      <div class="fl"><label>Tipo</label><div class="ro" id="c-tipo">—</div></div>
+      <div class="fl"><label>Tipo de material</label><div class="ro" id="c-tipo">—</div></div>
     </div>
-    <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px 16px;margin-bottom:12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-      <label style="font-size:12px;font-weight:600;color:#475569">Cantidad por llegar:</label>
-      <input type="number" id="kg-single-input" min="0" placeholder="0" class="kg-input" oninput="recalcKgSingle()">
-      <div id="kg-single-result" style="width:100%;margin-top:6px;font-size:13px;color:#1d4ed8;font-weight:500"></div>
-    </div>
-    <div class="tar-box" id="c-tarimas-est" style="display:none">
-      <div style="font-size:11px;font-weight:600;color:#1d4ed8;margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px">📦 Estimado de tarimas (cantidad OC)</div>
-      <div id="tar-content"></div>
+    <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px 16px;margin-bottom:12px;display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+      <div style="display:flex;align-items:center;gap:8px">
+        <label style="font-size:12px;font-weight:600;color:#475569;white-space:nowrap">Cantidad por llegar:</label>
+        <input type="number" id="kg-single-input" min="0" placeholder="0" style="width:110px;padding:7px 10px;border:1px solid #cbd5e1;border-radius:8px;font-size:14px;font-family:inherit;outline:none;color:#1e293b" oninput="recalcKgSingle()">
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <label style="font-size:12px;font-weight:600;color:#1d4ed8;white-space:nowrap">📦 Tarimas estimadas:</label>
+        <input type="number" id="c-tarimas-manual" min="0" placeholder="Ej. 12" style="width:110px;padding:7px 10px;border:1px solid #bfdbfe;border-radius:8px;font-size:14px;font-family:inherit;outline:none;color:#1d4ed8;background:#eff6ff;font-weight:700">
+      </div>
     </div>
   </div>
+
   <div class="sec" style="margin-top:4px"><i class="ti ti-calendar"></i> Programación de llegada</div>
   <div class="fg">
     <div class="fl"><label>Fecha de llegada</label><input type="date" id="c-fecha"></div>
@@ -310,12 +319,24 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
   <div id="vig-acceso-section">
     <div class="sec" style="margin-top:4px">Control de acceso</div>
     <div class="ts-grid">
-      <div><label style="font-size:11px;color:#64748b;display:block;margin-bottom:5px">📞 Proveedor se reporta</label><button class="btn-ts" id="btn-reporte" onclick="stampTime('reporte')"><i class="ti ti-phone-incoming" style="font-size:16px"></i><span style="font-weight:500">Registrar reporte</span><span class="tt" id="ts-reporte"></span></button></div>
+      <div>
+        <label style="font-size:11px;color:#64748b;display:block;margin-bottom:5px">📞 Proveedor se reporta</label>
+        <button class="btn-ts" id="btn-reporte" onclick="stampTime('reporte','btn-reporte','ts-reporte','clear-reporte')"><i class="ti ti-phone-incoming" style="font-size:16px"></i><span style="font-weight:500">Registrar reporte</span><span class="tt" id="ts-reporte"></span></button>
+        <button class="btn-ts-clear" id="clear-reporte" onclick="clearStamp('reporte','btn-reporte','ts-reporte','clear-reporte')">✕ Quitar registro</button>
+      </div>
       <div></div>
     </div>
     <div class="ts-grid">
-      <div><label style="font-size:11px;color:#64748b;display:block;margin-bottom:5px">Hora de llegada confirmada</label><button class="btn-ts" id="btn-entrada" onclick="stampTime('entrada')"><i class="ti ti-login" style="font-size:16px"></i><span style="font-weight:500">Registrar llegada</span><span class="tt" id="ts-entrada"></span></button></div>
-      <div><label style="font-size:11px;color:#64748b;display:block;margin-bottom:5px">Hora de salida de planta</label><button class="btn-ts" id="btn-salida" onclick="stampTime('salida')"><i class="ti ti-logout" style="font-size:16px"></i><span style="font-weight:500">Registrar salida</span><span class="tt" id="ts-salida"></span></button></div>
+      <div>
+        <label style="font-size:11px;color:#64748b;display:block;margin-bottom:5px">Hora de llegada confirmada</label>
+        <button class="btn-ts" id="btn-entrada" onclick="stampTime('entrada','btn-entrada','ts-entrada','clear-entrada')"><i class="ti ti-login" style="font-size:16px"></i><span style="font-weight:500">Registrar llegada</span><span class="tt" id="ts-entrada"></span></button>
+        <button class="btn-ts-clear" id="clear-entrada" onclick="clearStamp('entrada','btn-entrada','ts-entrada','clear-entrada')">✕ Quitar registro</button>
+      </div>
+      <div>
+        <label style="font-size:11px;color:#64748b;display:block;margin-bottom:5px">Hora de salida de planta</label>
+        <button class="btn-ts" id="btn-salida" onclick="stampTime('salida','btn-salida','ts-salida','clear-salida')"><i class="ti ti-logout" style="font-size:16px"></i><span style="font-weight:500">Registrar salida</span><span class="tt" id="ts-salida"></span></button>
+        <button class="btn-ts-clear" id="clear-salida" onclick="clearStamp('salida','btn-salida','ts-salida','clear-salida')">✕ Quitar registro</button>
+      </div>
     </div>
   </div>
   <div id="vig-cedis-note" style="display:none" class="info-note"><i class="ti ti-building-store"></i> Entrega a <strong>CEDIS</strong> — control de acceso no aplica.</div>
@@ -332,15 +353,28 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
     <div class="fl"><label>Proveedor</label><div class="ro pend" id="r-prov">—</div></div>
     <div class="fl"><label>Descripción</label><div class="ro pend" id="r-desc">—</div></div>
   </div>
-  <div class="sec">📦 Cantidades estimadas</div>
-  <div id="r-tar-box" style="display:none" class="tar-box"><div id="r-tar-content"></div></div>
-  <div id="r-tar-empty" style="background:#f8fafc;border:1px dashed #cbd5e1;border-radius:8px;padding:12px;margin-bottom:14px;font-size:12px;color:#94a3b8;text-align:center">Selecciona una OC para ver el estimado</div>
+
+  <div class="sec">📦 Tarimas a recibir</div>
+  <div id="r-tar-box" style="display:none;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:12px 16px;margin-bottom:14px">
+    <div id="r-tar-content"></div>
+  </div>
+  <div id="r-tar-empty" style="background:#f8fafc;border:1px dashed #cbd5e1;border-radius:8px;padding:12px;margin-bottom:14px;font-size:12px;color:#94a3b8;text-align:center">Selecciona una OC para ver las tarimas</div>
+
   <div class="sec" style="margin-top:4px">Confirmación de entrega</div>
   <div style="margin-bottom:14px"><div class="fl"><label>¿Entrega confirmada?</label><select id="q-conf" style="font-size:13px;padding:7px 10px;border:1px solid #cbd5e1;border-radius:8px;background:#fff;color:#1e293b;font-family:inherit;max-width:200px"><option value="">— Seleccionar —</option><option>SI</option><option>NO</option></select></div></div>
+
   <div class="sec">Tiempos de descarga</div>
   <div class="ts-grid">
-    <div><label style="font-size:11px;color:#64748b;display:block;margin-bottom:5px">Inicio de descarga</label><button class="btn-ts" id="btn-arranque" onclick="stampTime('arranque')"><i class="ti ti-player-play" style="font-size:16px"></i><span style="font-weight:500">Arranque</span><span class="tt" id="ts-arranque"></span></button></div>
-    <div><label style="font-size:11px;color:#64748b;display:block;margin-bottom:5px">Fin de descarga</label><button class="btn-ts" id="btn-fin" onclick="stampTime('fin')"><i class="ti ti-player-stop" style="font-size:16px"></i><span style="font-weight:500">Finalizar</span><span class="tt" id="ts-fin"></span></button></div>
+    <div>
+      <label style="font-size:11px;color:#64748b;display:block;margin-bottom:5px">Inicio de descarga</label>
+      <button class="btn-ts" id="btn-arranque" onclick="stampTime('arranque','btn-arranque','ts-arranque','clear-arranque')"><i class="ti ti-player-play" style="font-size:16px"></i><span style="font-weight:500">Registrar inicio</span><span class="tt" id="ts-arranque"></span></button>
+      <button class="btn-ts-clear" id="clear-arranque" onclick="clearStamp('arranque','btn-arranque','ts-arranque','clear-arranque')">✕ Quitar registro</button>
+    </div>
+    <div>
+      <label style="font-size:11px;color:#64748b;display:block;margin-bottom:5px">Fin de descarga</label>
+      <button class="btn-ts" id="btn-fin" onclick="stampTime('fin','btn-fin','ts-fin','clear-fin')"><i class="ti ti-player-stop" style="font-size:16px"></i><span style="font-weight:500">Registrar fin</span><span class="tt" id="ts-fin"></span></button>
+      <button class="btn-ts-clear" id="clear-fin" onclick="clearStamp('fin','btn-fin','ts-fin','clear-fin')">✕ Quitar registro</button>
+    </div>
   </div>
   <div class="fl" style="margin-bottom:12px"><label>Comentarios adicionales</label><textarea id="r-coments" placeholder="Observaciones, incidencias, condición del producto..."></textarea></div>
   <button class="btn-save" onclick="guardarRecibo()"><i class="ti ti-circle-check"></i> Confirmar recibo</button>
@@ -352,16 +386,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
   <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:16px">
     <div style="display:flex;align-items:center;gap:8px">
       <button onclick="calNav(-1)" style="padding:6px 12px;border:1px solid #cbd5e1;border-radius:8px;background:#fff;cursor:pointer;font-size:14px">‹</button>
-      <span id="cal-title" style="font-size:16px;font-weight:700;color:#1e293b;min-width:160px;text-align:center"></span>
+      <span id="cal-title" style="font-size:16px;font-weight:700;color:#1e293b;min-width:180px;text-align:center"></span>
       <button onclick="calNav(1)" style="padding:6px 12px;border:1px solid #cbd5e1;border-radius:8px;background:#fff;cursor:pointer;font-size:14px">›</button>
       <button onclick="calGoToday()" style="padding:6px 12px;border:1px solid #cbd5e1;border-radius:8px;background:#fff;cursor:pointer;font-size:12px;color:#1d4ed8;font-weight:600">Hoy</button>
     </div>
-    <div style="display:flex;align-items:center;gap:8px">
-      <label style="font-size:12px;color:#64748b;font-weight:500">Ver:</label>
-      <select id="cal-range" onchange="renderCalendario()" style="font-size:12px;padding:5px 8px;border:1px solid #cbd5e1;border-radius:8px;background:#fff;color:#1e293b;font-family:inherit">
-        <option value="1">1 mes</option><option value="3" selected>3 meses</option><option value="6">6 meses</option><option value="12">Todo el año</option>
-      </select>
-    </div>
+    <select id="cal-range" onchange="renderCalendario()" style="font-size:12px;padding:5px 8px;border:1px solid #cbd5e1;border-radius:8px;background:#fff;color:#1e293b;font-family:inherit">
+      <option value="1">1 mes</option><option value="3" selected>3 meses</option><option value="6">6 meses</option><option value="12">Todo el año</option>
+    </select>
   </div>
   <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px;align-items:center">
     <span style="font-size:11px;display:flex;align-items:center;gap:4px"><span style="width:12px;height:12px;border-radius:3px;background:#ede9fe;border:1px solid #7c3aed;display:inline-block"></span>RESINA</span>
@@ -402,13 +433,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
         <col style="width:5%"><col style="width:7%"><col style="width:11%"><col style="width:11%">
         <col style="width:5%"><col style="width:5%"><col style="width:5%"><col style="width:5%">
         <col style="width:5%"><col style="width:5%"><col style="width:5%">
-        <col style="width:7%"><col style="width:5%"><col style="width:4%"><col style="width:6%"><col style="width:9%">
+        <col style="width:7%"><col style="width:4%"><col style="width:4%"><col style="width:6%"><col style="width:10%">
       </colgroup>
       <thead><tr>
         <th>OC #</th><th>FECHA</th><th>PROVEEDOR</th><th>PRODUCTO</th>
         <th>PLANTA</th><th>UNIDAD</th><th>REPORTE</th><th>ENTRADA</th><th>SALIDA</th>
-        <th>ARRANQUE</th><th>FIN DESC.</th><th>⏱ DESCARGA</th>
-        <th>📦 TARIMAS</th><th>CONF.</th><th>ESTADO</th><th>ACCIONES</th>
+        <th>INICIO</th><th>FIN</th><th>⏱ DESCARGA</th>
+        <th>T.</th><th>CONF.</th><th>ESTADO</th><th>ACCIONES</th>
       </tr></thead>
       <tbody id="log-body"></tbody>
     </table>
@@ -425,33 +456,27 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
     <div style="display:flex;gap:8px;flex-wrap:wrap">
       <input type="text" id="log-filter-oc" placeholder="Filtrar por OC..." oninput="renderLogMod()" style="font-size:12px;padding:6px 10px;border:1px solid #cbd5e1;border-radius:8px;background:#fff;color:#1e293b;width:160px">
       <select id="log-filter-tipo" onchange="renderLogMod()" style="font-size:12px;padding:6px 10px;border:1px solid #cbd5e1;border-radius:8px;background:#fff;color:#1e293b">
-        <option value="">Todos los eventos</option>
-        <option value="nueva">Nueva OC</option>
-        <option value="edicion">Edición</option>
-        <option value="eliminacion">Eliminación</option>
+        <option value="">Todos</option><option value="nueva">Nueva OC</option><option value="edicion">Edición</option><option value="eliminacion">Eliminación</option>
       </select>
     </div>
   </div>
   <div style="background:#fff;border-radius:12px;border:1px solid #e2e8f0;overflow:hidden">
     <table class="tbl">
       <thead><tr>
-        <th style="width:140px">FECHA Y HORA</th>
-        <th style="width:120px">EVENTO</th>
-        <th style="width:80px">OC #</th>
-        <th style="width:180px">PROVEEDOR</th>
-        <th>DETALLE</th>
+        <th style="width:140px">FECHA Y HORA</th><th style="width:120px">EVENTO</th>
+        <th style="width:80px">OC #</th><th style="width:180px">PROVEEDOR</th><th>DETALLE</th>
       </tr></thead>
       <tbody id="log-mod-body"></tbody>
     </table>
   </div>
 </div>
 
-</div><!-- end content -->
+</div>
 
 <script>
-// ══════════════════════════════════════════
+// ══════════════════════════════
 // DATOS
-// ══════════════════════════════════════════
+// ══════════════════════════════
 let TABLERO=[];
 let records=[];
 let logMods=[];
@@ -460,56 +485,42 @@ const LS_LOG='zubex_log_bk';
 try{records=JSON.parse(localStorage.getItem(LS_KEY)||'[]')}catch(e){}
 try{logMods=JSON.parse(localStorage.getItem(LS_LOG)||'[]')}catch(e){}
 
-// escuchar Firestore
 window.addEventListener('recordsUpdated',()=>{
-  records=window._records||[];
+  records=(window._records||[]);
   try{localStorage.setItem(LS_KEY,JSON.stringify(records))}catch(e){}
-  const h=document.getElementById('panel-historial');
-  const c=document.getElementById('panel-calendario');
-  if(h&&h.classList.contains('active')) renderLog();
-  if(c&&c.classList.contains('active')) renderCalendario();
+  if(document.getElementById('panel-historial').classList.contains('active')) renderLog();
+  if(document.getElementById('panel-calendario').classList.contains('active')) renderCalendario();
 });
 window.addEventListener('logsUpdated',()=>{
   logMods=window._logs||[];
   try{localStorage.setItem(LS_LOG,JSON.stringify(logMods))}catch(e){}
-  const l=document.getElementById('panel-log');
-  if(l&&l.classList.contains('active')) renderLogMod();
+  if(document.getElementById('panel-log').classList.contains('active')) renderLogMod();
 });
 
 async function saveDB(rec){
   const idx=records.findIndex(r=>r.oc===rec.oc);
-  if(idx>=0) records[idx]=rec; else records.push(rec);
+  if(idx>=0)records[idx]=rec; else records.push(rec);
   try{localStorage.setItem(LS_KEY,JSON.stringify(records))}catch(e){}
-  if(window.fbSave) try{await window.fbSave(rec)}catch(e){console.warn(e);}
+  if(window.fbSave)try{await window.fbSave(rec)}catch(e){console.warn(e);}
 }
-
 async function deleteDB(oc){
   records=records.filter(r=>r.oc!==oc);
   try{localStorage.setItem(LS_KEY,JSON.stringify(records))}catch(e){}
-  if(window.fbDelete) try{await window.fbDelete(oc)}catch(e){console.warn(e);}
+  if(window.fbDelete)try{await window.fbDelete(oc)}catch(e){console.warn(e);}
 }
-
 async function saveLogEntry(entry){
   logMods.unshift(entry);
   try{localStorage.setItem(LS_LOG,JSON.stringify(logMods))}catch(e){}
-  if(window.fbSaveLog) try{await window.fbSaveLog(entry)}catch(e){console.warn(e);}
+  if(window.fbSaveLog)try{await window.fbSaveLog(entry)}catch(e){console.warn(e);}
 }
-
 function addLog(tipo,oc,prov,detalle){
   const now=new Date();
-  const entry={
-    id: now.getTime()+'_'+oc,
-    ts: now.toISOString(),
-    fecha: now.toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'numeric'}),
-    hora: now.toTimeString().slice(0,5),
-    tipo, oc, prov, detalle
-  };
-  saveLogEntry(entry);
+  saveLogEntry({id:now.getTime()+'_'+oc,ts:now.toISOString(),fecha:now.toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'numeric'}),hora:now.toTimeString().slice(0,5),tipo,oc,prov,detalle});
 }
 
-// ══════════════════════════════════════════
+// ══════════════════════════════
 // CLASIFICACIÓN
-// ══════════════════════════════════════════
+// ══════════════════════════════
 const GAYLOR=['10656-01','12681-01','13790-01','15365-01','16776-01'];
 const TAMBO=['04342-01','04343-01','04344-01','04345-01','14836-01','04346-01','06447-01'];
 function artKey(art){const m=(art||'').match(/(\d{5}-\d{2})$/);return m?m[1]:'';}
@@ -530,31 +541,10 @@ function getTipo(art,desc){
   if(d.startsWith('ADITIVO')||d.startsWith('PIG'))return{label:'ADITIVO',cls:'tag-adit'};
   return{label:'OTRO',cls:'tag-otro'};
 }
-function calcTarimas(art,qty){
-  const sf=subfamilia(art),key=artKey(art);
-  const q=parseFloat((qty||'0').toString().replace(/,/g,''));
-  if(!sf||isNaN(q)||q<=0)return null;
-  if(sf==='01'){
-    if(GAYLOR.includes(key)){const t=q/740;return{tarimas:Math.ceil(t),presentacion:'Gaylor 740 kg',detalle:`${q.toLocaleString()} kg ÷ 740 = ${t.toFixed(2)} cajas`};}
-    const t=(q/25)/28;return{tarimas:Math.ceil(t),presentacion:'Costal 25 kg',detalle:`${q.toLocaleString()} kg ÷ 25 = ${Math.ceil(q/25)} costales ÷ 28/tarima`};
-  }
-  if(sf==='04'){
-    if(TAMBO.includes(key)){const t=(q/179)/4;return{tarimas:Math.ceil(t),presentacion:'Tambo 179 kg',detalle:`${q} kg ÷ 179 = ${(q/179).toFixed(1)} tambos ÷ 4/tarima`};}
-    const t=(q/17)/34;return{tarimas:Math.ceil(t),presentacion:'Cubeta 17 kg',detalle:`${q} kg ÷ 17 = ${(q/17).toFixed(1)} cubetas ÷ 34/tarima`};
-  }
-  if(sf==='05'){
-    if(TAMBO.includes(key)){const t=(q/179)/4;return{tarimas:Math.ceil(t),presentacion:'Tambo 179 kg',detalle:`${q} kg ÷ 179 = ${(q/179).toFixed(1)} tambos ÷ 4/tarima`};}
-    const t=(q/17)/34;return{tarimas:Math.ceil(t),presentacion:'Cubeta 17 kg',detalle:`${q} kg ÷ 17 = ${(q/17).toFixed(1)} cubetas ÷ 34/tarima`};
-  }
-  if(sf==='02'||sf==='03'){const t=(q/25)/40;return{tarimas:Math.ceil(t),presentacion:'Costal 25 kg',detalle:`${q} kg ÷ 25 = ${Math.ceil(q/25)} costales ÷ 40/tarima`};}
-  if(sf==='06'){const t=(q/100)/10;return{tarimas:Math.ceil(t),presentacion:'Paquete 100 pzs',detalle:`${q} pzs ÷ 100 = ${(q/100).toFixed(1)} paquetes ÷ 10/tarima`};}
-  if(sf==='07')return{tarimas:Math.ceil(q/1500),presentacion:'Caja 1500 pzs',detalle:`${q} pzs ÷ 1500/caja`};
-  return null;
-}
 
-// ══════════════════════════════════════════
-// UI UTILS
-// ══════════════════════════════════════════
+// ══════════════════════════════
+// UI
+// ══════════════════════════════
 document.getElementById('hdr-date').textContent=new Date().toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'numeric'});
 
 function cerrarSplash(){
@@ -570,9 +560,9 @@ function cerrarSplash(){
   },500);
 }
 
-// ══════════════════════════════════════════
+// ══════════════════════════════
 // ACCESOS
-// ══════════════════════════════════════════
+// ══════════════════════════════
 const ACCESOS={compras:{user:'compras',pass:'zx2026c'},vigilancia:{user:'vigilancia',pass:'zx2026v'},recibo:{user:'recibo',pass:'zx2026r'}};
 const sesiones={compras:false,vigilancia:false,recibo:false};
 
@@ -582,9 +572,9 @@ function switchTab(n){
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   document.getElementById('panel-'+n).classList.add('active');
   document.getElementById('tab-'+n).classList.add('active');
-  if(n==='historial') renderLog();
-  if(n==='calendario') renderCalendario();
-  if(n==='log') renderLogMod();
+  if(n==='historial')renderLog();
+  if(n==='calendario')renderCalendario();
+  if(n==='log')renderLogMod();
 }
 
 function mostrarLogin(sec){
@@ -597,7 +587,6 @@ function mostrarLogin(sec){
   m.dataset.seccion=sec;m.style.display='flex';
   setTimeout(()=>document.getElementById('login-user').focus(),100);
 }
-
 function loginSubmit(){
   const m=document.getElementById('login-modal');
   const sec=m.dataset.seccion;
@@ -611,20 +600,37 @@ function loginSubmit(){
   }
 }
 
-// ══════════════════════════════════════════
-// STAMPS
-// ══════════════════════════════════════════
+// ══════════════════════════════
+// STAMPS con deshacer
+// ══════════════════════════════
 const stamps={};
-function stampTime(id){
-  const t=new Date().toTimeString().slice(0,5);stamps[id]=t;
-  const btn=document.getElementById('btn-'+id);
+function stampTime(id,btnId,tsId,clearId){
+  const t=new Date().toTimeString().slice(0,5);
+  stamps[id]=t;
+  const btn=document.getElementById(btnId);
   if(btn){btn.classList.add('stamped');const ic=btn.querySelector('i');if(ic)ic.className='ti ti-check';}
-  const el=document.getElementById('ts-'+id);if(el)el.textContent=t;
+  const el=document.getElementById(tsId);if(el)el.textContent=t;
+  const clr=document.getElementById(clearId);if(clr)clr.style.display='block';
+}
+function clearStamp(id,btnId,tsId,clearId){
+  delete stamps[id];
+  const btn=document.getElementById(btnId);
+  if(btn){
+    btn.classList.remove('stamped');
+    const ic=btn.querySelector('i');
+    if(ic){
+      const iconMap={reporte:'ti-phone-incoming',entrada:'ti-login',salida:'ti-logout',arranque:'ti-player-play',fin:'ti-player-stop'};
+      ic.className='ti '+(iconMap[id]||'ti-clock');
+    }
+    const tt=btn.querySelector('.tt');if(tt)tt.textContent='';
+  }
+  const el=document.getElementById(tsId);if(el)el.textContent='';
+  const clr=document.getElementById(clearId);if(clr)clr.style.display='none';
 }
 
-// ══════════════════════════════════════════
-// CSV CARGA
-// ══════════════════════════════════════════
+// ══════════════════════════════
+// CSV
+// ══════════════════════════════
 function cargarArchivoOC(input){
   const file=input.files[0];if(!file)return;
   const status=document.getElementById('csv-status');
@@ -645,16 +651,20 @@ function cargarArchivoOC(input){
         qty:find(['solicitado']),
         cod:find(['codigo','código']),
         prov:find(['proveedor']),
-        desc:find(['descripci','descripcion'])
+        desc:find(['descripci','dscription'])
       };
       if(idx.oc<0)idx.oc=0;if(idx.fecha<0)idx.fecha=2;if(idx.art<0)idx.art=5;
       if(idx.qty<0)idx.qty=6;if(idx.cod<0)idx.cod=13;if(idx.prov<0)idx.prov=14;if(idx.desc<0)idx.desc=15;
       const nuevas=[];
       for(let i=1;i<lines.length;i++){
         const cols=lines[i].split(sep).map(c=>c.trim().replace(/^"|"$/g,''));
-        const oc=idx.oc>=0?cols[idx.oc]:'';
+        const oc=cols[idx.oc]||'';
         if(!oc||isNaN(Number(oc.replace(/,/g,''))))continue;
-        nuevas.push({oc,fecha:cols[idx.fecha]||'',art:cols[idx.art]||'',qty:cols[idx.qty]||'',cod:cols[idx.cod]||'',prov:cols[idx.prov]||'',desc:cols[idx.desc]||''});
+        const prov=cols[idx.prov]||'';
+        const desc=cols[idx.desc]||'';
+        // validar que proveedor no sea un número (evita mapeo incorrecto)
+        if(prov&&!isNaN(Number(prov.replace(/[.,]/g,''))))continue;
+        nuevas.push({oc,fecha:cols[idx.fecha]||'',art:cols[idx.art]||'',qty:cols[idx.qty]||'',cod:cols[idx.cod]||'',prov,desc});
       }
       if(!nuevas.length){status.textContent='⚠ No se encontraron OC';return;}
       TABLERO=nuevas;
@@ -666,9 +676,9 @@ function cargarArchivoOC(input){
   reader.readAsText(file,'UTF-8');
 }
 
-// ══════════════════════════════════════════
+// ══════════════════════════════
 // BÚSQUEDA OC
-// ══════════════════════════════════════════
+// ══════════════════════════════
 function buscarOC(val,ctx){
   const sgId=ctx==='compras'?'oc-suggest':ctx==='vig'?'oc-suggest-vig':'oc-suggest-rec';
   const sg=document.getElementById(sgId);
@@ -680,21 +690,19 @@ function buscarOC(val,ctx){
   sg.innerHTML=all.map(r=>{
     const tipo=getTipo(r.art,r.desc);
     const lines=TABLERO.filter(t=>t.oc===r.oc);
-    const tar=calcTarimas(r.art,r.qty);
     return`<div class="oc-item" onclick="selectOC('${r.oc}','${ctx}')">
       <span style="font-weight:600;color:#1d4ed8;font-size:12px">OC ${r.oc}</span>
       <span class="tipo-tag ${tipo.cls}">${tipo.label}</span>
       ${lines.length>1?`<span style="font-size:10px;background:#e0f2fe;color:#0369a1;padding:1px 6px;border-radius:4px;font-weight:600;margin-left:4px">${lines.length} partidas</span>`:''}
-      ${tar?`<span style="font-size:10px;background:#fef9c3;color:#a16207;padding:1px 6px;border-radius:4px;font-weight:600;margin-left:4px">~${tar.tarimas} tar.</span>`:''}
-      <div style="color:#64748b;font-size:11px;margin-top:2px">${r.prov}</div>
-      <div style="color:#64748b;font-size:11px">${(r.desc||'').substring(0,55)}${(r.desc||'').length>55?'...':''}</div>
+      <div style="color:#1e293b;font-size:12px;margin-top:2px;font-weight:500">${r.prov}</div>
+      <div style="color:#64748b;font-size:11px">${(r.desc||'').substring(0,60)}${(r.desc||'').length>60?'...':''}</div>
     </div>`;
   }).join('');
   sg.style.display='block';
 }
 
 const selectedLines={};
-let _tarEst=null,_tarPres='',_tarDet='',_kgLlegar=0;
+let _tarManual=null,_kgLlegar=0;
 
 function selectOC(oc,ctx){
   document.querySelectorAll('.oc-suggest').forEach(s=>s.style.display='none');
@@ -704,13 +712,12 @@ function selectOC(oc,ctx){
     document.getElementById('c-oc').value=oc;
     document.getElementById('c-prov').textContent=lines[0].prov;
     document.getElementById('c-prov').classList.remove('pend');
-    _tarEst=null;_kgLlegar=0;
+    _tarManual=null;_kgLlegar=0;
     if(lines.length===1){
       document.getElementById('multi-lines').style.display='none';
       fillComprasFields(lines[0]);
     } else {
       document.getElementById('c-fields').style.display='none';
-      document.getElementById('c-tarimas-est').style.display='none';
       document.getElementById('multi-lines').style.display='block';
       document.getElementById('kg-resumen').style.display='none';
       selectedLines[oc]=lines;
@@ -720,18 +727,27 @@ function selectOC(oc,ctx){
         return`<div class="multi-row" id="ml-${i}">
           <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
             <div onclick="pickLine(${i},'${oc}')" style="flex:1;cursor:pointer">
-              <span style="font-weight:600;color:#1d4ed8;font-size:11px">Línea ${i+1}</span>
+              <span style="font-weight:600;color:#1d4ed8;font-size:11px">Partida ${i+1}</span>
               <span class="tipo-tag ${tipo.cls}">${tipo.label}</span>
-              <div style="color:#1e293b;margin-top:3px;font-size:13px">${l.desc}</div>
+              <div style="color:#1e293b;margin-top:3px;font-size:13px;font-weight:500">${l.desc}</div>
               <div style="color:#64748b;font-size:11px;margin-top:2px">OC: <strong>${qNum.toLocaleString()}</strong> &nbsp;|&nbsp; Art: ${l.art}</div>
             </div>
             <div style="display:flex;align-items:center;gap:6px" onclick="event.stopPropagation()">
-              <label style="font-size:11px;color:#64748b;white-space:nowrap">Cantidad por llegar:</label>
-              <input type="number" class="kg-input" data-art="${l.art}" min="0" placeholder="0" oninput="recalcKg('${oc}')">
+              <label style="font-size:11px;color:#64748b;white-space:nowrap">Cant. a llegar:</label>
+              <input type="number" class="kg-input" data-art="${l.art}" min="0" placeholder="0"
+                style="width:100px;padding:7px 10px;border:1px solid #cbd5e1;border-radius:8px;font-size:13px;font-family:inherit;outline:none"
+                oninput="recalcKg('${oc}')">
             </div>
           </div>
         </div>`;
       }).join('');
+      // campo tarimas manuales para OC multi-línea
+      document.getElementById('lines-container').innerHTML += `
+        <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:12px 16px;margin-top:8px;display:flex;align-items:center;gap:10px">
+          <label style="font-size:12px;font-weight:600;color:#1d4ed8;white-space:nowrap">📦 Tarimas estimadas (total):</label>
+          <input type="number" id="c-tarimas-manual" min="0" placeholder="Ej. 12"
+            style="width:110px;padding:7px 10px;border:1px solid #bfdbfe;border-radius:8px;font-size:14px;font-family:inherit;outline:none;color:#1d4ed8;background:#fff;font-weight:700">
+        </div>`;
     }
   } else if(ctx==='vig'){
     document.getElementById('v-oc').value=oc;
@@ -752,14 +768,19 @@ function selectOC(oc,ctx){
     document.getElementById('r-prov').classList.remove('pend');
     document.getElementById('r-desc').textContent=rec&&rec.desc?rec.desc:lines[0].desc;
     document.getElementById('r-desc').classList.remove('pend');
-    const art=rec&&rec.art?rec.art:lines[0].art;
-    const qty=rec&&rec.qty?rec.qty:lines[0].qty;
-    const tar=calcTarimas(art,rec&&rec.kg_llegar?rec.kg_llegar:qty);
     const box=document.getElementById('r-tar-box'),emp=document.getElementById('r-tar-empty');
-    if(tar){
-      document.getElementById('r-tar-content').innerHTML=`<div style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin-bottom:4px"><span style="font-size:28px;font-weight:700;color:#1d4ed8">${tar.tarimas}</span><span style="font-size:14px;color:#1e293b;font-weight:500">tarimas estimadas</span><span style="font-size:11px;background:#dbeafe;color:#1d4ed8;padding:2px 10px;border-radius:4px;font-weight:600">${tar.presentacion}</span></div><div style="font-size:11px;color:#64748b">${tar.detalle}</div>`;
+    const tarimas=rec&&rec.tar_manual?rec.tar_manual:null;
+    if(tarimas){
+      document.getElementById('r-tar-content').innerHTML=`
+        <div style="display:flex;align-items:baseline;gap:10px">
+          <span style="font-size:36px;font-weight:700;color:#1d4ed8">${tarimas}</span>
+          <span style="font-size:14px;color:#1e293b;font-weight:500">tarimas programadas</span>
+        </div>
+        ${rec.kg_llegar?`<div style="font-size:12px;color:#64748b;margin-top:4px">Cantidad a llegar: ${Number(rec.kg_llegar).toLocaleString()}</div>`:''}`;
       box.style.display='block';emp.style.display='none';
-    } else {box.style.display='none';emp.style.display='block';}
+    } else {
+      box.style.display='none';emp.style.display='block';
+    }
   }
 }
 
@@ -771,26 +792,18 @@ function pickLine(idx,oc){
 
 function recalcKg(oc){
   const inputs=document.querySelectorAll('.kg-input');
-  let total=0,art='';
-  inputs.forEach(inp=>{const v=parseFloat(inp.value||0);if(v>0)total+=v;if(!art&&inp.dataset.art)art=inp.dataset.art;});
+  let total=0;
+  inputs.forEach(inp=>{const v=parseFloat(inp.value||0);if(v>0)total+=v;});
   const resumen=document.getElementById('kg-resumen');
-  if(total<=0){resumen.style.display='none';_tarEst=null;return;}
+  if(total<=0){resumen.style.display='none';_kgLlegar=0;return;}
   resumen.style.display='block';
   document.getElementById('kg-total-display').textContent=total.toLocaleString();
-  const tar=calcTarimas(art,total.toString());
-  if(tar){document.getElementById('kg-tar-num').textContent=tar.tarimas;document.getElementById('kg-tar-det').textContent=tar.detalle;_tarEst=tar.tarimas;_tarPres=tar.presentacion;_tarDet=tar.detalle;_kgLlegar=total;}
-  else{document.getElementById('kg-tar-num').textContent='—';_tarEst=null;}
+  _kgLlegar=total;
 }
 
 function recalcKgSingle(){
-  const art=document.getElementById('c-art').textContent.trim();
-  const inp=document.getElementById('kg-single-input');
-  const q=parseFloat(inp.value||0);
-  const res=document.getElementById('kg-single-result');
-  if(q<=0){res.innerHTML='';_tarEst=null;_kgLlegar=0;return;}
-  const tar=calcTarimas(art,q.toString());
-  if(tar){res.innerHTML=`<span style="font-size:18px;font-weight:700;color:#1d4ed8">${tar.tarimas}</span> <span style="color:#64748b">tarimas est.</span> · <span style="font-size:11px;background:#dbeafe;color:#1d4ed8;padding:1px 8px;border-radius:4px">${tar.presentacion}</span> <span style="font-size:10px;color:#94a3b8;margin-left:4px">${tar.detalle}</span>`;_tarEst=tar.tarimas;_tarPres=tar.presentacion;_tarDet=tar.detalle;_kgLlegar=q;}
-  else{res.innerHTML=`<span style="color:#64748b">Cantidad: ${q.toLocaleString()}</span>`;_tarEst=null;_kgLlegar=q;}
+  const q=parseFloat(document.getElementById('kg-single-input').value||0);
+  _kgLlegar=q>0?q:0;
 }
 
 function fillComprasFields(line){
@@ -798,27 +811,28 @@ function fillComprasFields(line){
   document.getElementById('c-art').textContent=line.art;
   document.getElementById('c-desc').textContent=line.desc;
   document.getElementById('c-qty').textContent=line.qty;
-  const inp=document.getElementById('kg-single-input');
-  if(inp){inp.value='';document.getElementById('kg-single-result').innerHTML='';_tarEst=null;_kgLlegar=0;}
+  // limpiar campos
+  const inp=document.getElementById('kg-single-input');if(inp)inp.value='';
+  const tm=document.getElementById('c-tarimas-manual');if(tm)tm.value='';
+  document.getElementById('kg-single-result')&&(document.getElementById('kg-single-result').innerHTML='');
+  _tarManual=null;_kgLlegar=0;
   const t=getTipo(line.art,line.desc);
   document.getElementById('c-tipo').innerHTML=`<span class="tipo-tag ${t.cls}">${t.label}</span>`;
-  const tar=calcTarimas(line.art,line.qty);
-  const box=document.getElementById('c-tarimas-est');
-  if(tar){document.getElementById('tar-content').innerHTML=`<div style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin-bottom:4px"><span style="font-size:22px;font-weight:700;color:#1d4ed8">${tar.tarimas}</span><span style="font-size:13px;color:#1e293b;font-weight:500">tarimas est.</span><span style="font-size:11px;background:#dbeafe;color:#1d4ed8;padding:2px 8px;border-radius:4px">${tar.presentacion}</span></div><div style="font-size:10px;color:#94a3b8">${tar.detalle}</div>`;box.style.display='block';}
-  else box.style.display='none';
+  document.getElementById('c-tarimas-est')&&(document.getElementById('c-tarimas-est').style.display='none');
 }
 
 document.addEventListener('click',e=>{if(!e.target.closest('.oc-wrap'))document.querySelectorAll('.oc-suggest').forEach(s=>s.style.display='none');});
 
-// ══════════════════════════════════════════
+// ══════════════════════════════
 // GUARDAR
-// ══════════════════════════════════════════
+// ══════════════════════════════
 async function guardarCompra(){
   const oc=document.getElementById('c-oc').value.trim();
   if(!oc){alert('Ingresa el número de OC');return;}
   const art=document.getElementById('c-art').textContent.trim();
   const qty=document.getElementById('c-qty').textContent.trim();
-  const tar=_tarEst?{tarimas:_tarEst,presentacion:_tarPres,detalle:_tarDet}:calcTarimas(art,qty);
+  const tmEl=document.getElementById('c-tarimas-manual');
+  const tarManual=tmEl&&tmEl.value?Number(tmEl.value):null;
   const existing=records.find(r=>r.oc===oc)||{};
   const esNueva=!existing.oc;
   const rec={
@@ -832,7 +846,7 @@ async function guardarCompra(){
     planta:document.getElementById('c-planta').value,
     unidad:document.getElementById('c-unidad').value,
     kg_llegar:_kgLlegar||'',
-    tar_est:tar?tar.tarimas:'',tar_pres:tar?tar.presentacion:'',tar_det:tar?tar.detalle:'',
+    tar_manual:tarManual!==null?tarManual:(existing.tar_manual||''),
     estado:existing.estado||'pendiente',
     reporte:existing.reporte||'',entrada:existing.entrada||'',salida:existing.salida||'',
     arranque:existing.arranque||'',fin:existing.fin||'',
@@ -840,8 +854,8 @@ async function guardarCompra(){
   };
   await saveDB(rec);
   addLog(esNueva?'nueva':'edicion',oc,rec.prov,
-    esNueva?`Nueva OC. Proveedor: ${rec.prov} | Producto: ${rec.desc} | Fecha: ${rec.fecha} | Planta: ${rec.planta}`
-           :`Actualizada desde Compras. Fecha: ${rec.fecha} | Planta: ${rec.planta} | Unidad: ${rec.unidad}`);
+    esNueva?`Nueva OC. Prov: ${rec.prov} | Prod: ${rec.desc} | Fecha: ${rec.fecha} | Planta: ${rec.planta} | Tarimas: ${tarManual||'no especificado'}`
+           :`Actualizada. Fecha: ${rec.fecha} | Planta: ${rec.planta} | Tarimas: ${tarManual||'no especificado'}`);
   alert('✅ OC '+oc+' guardada.');
 }
 
@@ -871,15 +885,14 @@ async function guardarRecibo(){
   rec.confirmacion=document.getElementById('q-conf').value;
   rec.comentarios=document.getElementById('r-coments').value;
   rec.estado='recibido';
-  if(!rec.tar_est&&rec.art){const tar=calcTarimas(rec.art,rec.qty);if(tar){rec.tar_est=tar.tarimas;rec.tar_pres=tar.presentacion;}}
   await saveDB(rec);
   if(!prevArr&&rec.arranque)switchTab('historial');
   else alert('✅ Recibo confirmado para OC '+oc);
 }
 
-// ══════════════════════════════════════════
+// ══════════════════════════════
 // EDITAR / ELIMINAR
-// ══════════════════════════════════════════
+// ══════════════════════════════
 let _pendingAction=null,_editSnapshot=null;
 
 function pedirPassAccion(type,oc){
@@ -890,7 +903,6 @@ function pedirPassAccion(type,oc){
   document.getElementById('pass-modal').style.display='flex';
   setTimeout(()=>document.getElementById('pass-input').focus(),100);
 }
-
 function confirmarPass(){
   const p=document.getElementById('pass-input').value;
   if(p!=='zx2026c'){document.getElementById('pass-error').style.display='block';document.getElementById('pass-input').value='';return;}
@@ -899,7 +911,6 @@ function confirmarPass(){
   if(_pendingAction.type==='delete')ejecutarEliminacion(_pendingAction.oc);
   _pendingAction=null;
 }
-
 function abrirEdicion(oc){
   const rec=records.find(r=>r.oc===oc);if(!rec)return;
   _editSnapshot={...rec};
@@ -913,36 +924,81 @@ function abrirEdicion(oc){
   document.getElementById('edit-semana').value=rec.semana||'';
   document.getElementById('edit-mes').value=rec.mes||'';
   document.getElementById('edit-kg').value=rec.kg_llegar||'';
+  document.getElementById('edit-tarimas').value=rec.tar_manual||'';
   document.getElementById('edit-modal').style.display='flex';
 }
-
 async function confirmarEdicion(){
   const oc=document.getElementById('edit-oc-num').textContent;
   const rec=records.find(r=>r.oc===oc);if(!rec)return;
-  const campos={prov:'Proveedor',desc:'Descripción',fecha:'Fecha llegada',hora:'Hora',planta:'Planta',unidad:'Unidad',semana:'Semana',mes:'Mes',kg_llegar:'Cantidad por llegar'};
-  const vals={prov:document.getElementById('edit-prov').value,desc:document.getElementById('edit-desc').value,fecha:document.getElementById('edit-fecha').value,hora:document.getElementById('edit-hora').value,planta:document.getElementById('edit-planta').value,unidad:document.getElementById('edit-unidad').value,semana:document.getElementById('edit-semana').value,mes:document.getElementById('edit-mes').value,kg_llegar:document.getElementById('edit-kg').value};
+  const campos={prov:'Proveedor',desc:'Descripción',fecha:'Fecha',hora:'Hora',planta:'Planta',unidad:'Unidad',semana:'Semana',mes:'Mes',kg_llegar:'Cant. por llegar',tar_manual:'Tarimas'};
+  const vals={prov:document.getElementById('edit-prov').value,desc:document.getElementById('edit-desc').value,fecha:document.getElementById('edit-fecha').value,hora:document.getElementById('edit-hora').value,planta:document.getElementById('edit-planta').value,unidad:document.getElementById('edit-unidad').value,semana:document.getElementById('edit-semana').value,mes:document.getElementById('edit-mes').value,kg_llegar:document.getElementById('edit-kg').value,tar_manual:document.getElementById('edit-tarimas').value};
   const cambios=[];
   Object.keys(vals).forEach(k=>{const a=String(_editSnapshot[k]||''),b=String(vals[k]||'');if(a!==b)cambios.push(`${campos[k]}: "${a}" → "${b}"`);});
   Object.assign(rec,vals);
+  if(vals.tar_manual)rec.tar_manual=Number(vals.tar_manual);
   await saveDB(rec);
   document.getElementById('edit-modal').style.display='none';
   if(cambios.length)addLog('edicion',oc,rec.prov,cambios.join(' | '));
   renderLog();
   alert('✅ OC '+oc+' actualizada.');
 }
-
 async function ejecutarEliminacion(oc){
   const rec=records.find(r=>r.oc===oc);if(!rec)return;
-  if(!confirm(`¿Confirmas eliminar OC ${oc} — ${rec.prov}?\nEsta acción no se puede deshacer.`))return;
-  addLog('eliminacion',oc,rec.prov,`OC eliminada. Prov: ${rec.prov} | Prod: ${rec.desc} | Fecha: ${rec.fecha}`);
+  if(!confirm(`¿Confirmas eliminar OC ${oc} — ${rec.prov}?`))return;
+  addLog('eliminacion',oc,rec.prov,`Eliminada. Prov: ${rec.prov} | Prod: ${rec.desc} | Fecha: ${rec.fecha}`);
   await deleteDB(oc);
   renderLog();
   alert('🗑️ OC '+oc+' eliminada.');
 }
 
-// ══════════════════════════════════════════
+// ══════════════════════════════
+// DETALLE OC (modal partidas)
+// ══════════════════════════════
+function mostrarDetalleOC(oc){
+  const rec=records.find(r=>r.oc===oc);
+  const lines=TABLERO.filter(r=>r.oc===oc);
+  document.getElementById('oc-detail-title').textContent=`OC ${oc} — ${rec?rec.prov:''}`;
+  const pm={pendiente:'p-p',dentro:'p-d',fuera:'p-f',recibido:'p-r'};
+  let html='';
+  // info general
+  if(rec){
+    html+=`<div style="background:#f8fafc;border-radius:8px;padding:12px 14px;margin-bottom:14px;display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px">
+      <div><div style="font-size:10px;color:#94a3b8;font-weight:600;text-transform:uppercase">Fecha llegada</div><div style="font-size:13px;font-weight:600;color:#1e293b">${rec.fecha||'—'}</div></div>
+      <div><div style="font-size:10px;color:#94a3b8;font-weight:600;text-transform:uppercase">Hora</div><div style="font-size:13px;font-weight:600;color:#1e293b">${rec.hora||'—'}</div></div>
+      <div><div style="font-size:10px;color:#94a3b8;font-weight:600;text-transform:uppercase">Planta</div><div style="font-size:13px;font-weight:600;color:#1e293b">${rec.planta||'—'}</div></div>
+      <div><div style="font-size:10px;color:#94a3b8;font-weight:600;text-transform:uppercase">Unidad</div><div style="font-size:13px;font-weight:600;color:#1e293b">${rec.unidad||'—'}</div></div>
+      <div><div style="font-size:10px;color:#94a3b8;font-weight:600;text-transform:uppercase">Tarimas</div><div style="font-size:20px;font-weight:700;color:#1d4ed8">${rec.tar_manual||'—'}</div></div>
+      <div><div style="font-size:10px;color:#94a3b8;font-weight:600;text-transform:uppercase">Estado</div><div><span class="pill ${pm[rec.estado]||'p-p'}">${rec.estado||'pendiente'}</span></div></div>
+    </div>`;
+  }
+  // partidas del TABLERO
+  if(lines.length){
+    html+=`<div style="font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Partidas (${lines.length})</div>`;
+    html+=lines.map((l,i)=>{
+      const tipo=getTipo(l.art,l.desc);
+      return`<div style="border:1px solid #e2e8f0;border-radius:8px;padding:10px 12px;margin-bottom:6px;background:#fafafa">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+          <span style="font-weight:700;color:#64748b;font-size:11px">Partida ${i+1}</span>
+          <span class="tipo-tag ${tipo.cls}">${tipo.label}</span>
+        </div>
+        <div style="font-size:13px;font-weight:600;color:#1e293b;margin-bottom:4px">${l.desc||'—'}</div>
+        <div style="display:flex;gap:16px;font-size:12px;color:#64748b;flex-wrap:wrap">
+          <span>Código: <strong style="color:#1e293b">${l.art||'—'}</strong></span>
+          <span>Cantidad OC: <strong style="color:#1e293b">${l.qty||'—'}</strong></span>
+          <span>Proveedor cód: <strong style="color:#1e293b">${l.cod||'—'}</strong></span>
+        </div>
+      </div>`;
+    }).join('');
+  } else {
+    html+='<div style="color:#94a3b8;font-size:12px;text-align:center;padding:16px">No hay partidas del CSV cargadas para esta OC.<br>Carga el archivo CSV en Compras para ver las partidas.</div>';
+  }
+  document.getElementById('oc-detail-body').innerHTML=html;
+  document.getElementById('oc-detail-modal').style.display='flex';
+}
+
+// ══════════════════════════════
 // HISTORIAL
-// ══════════════════════════════════════════
+// ══════════════════════════════
 let logTimer=null;
 function elapsedSecs(t){if(!t)return null;const[h,m]=t.split(':').map(Number),now=new Date(),s=new Date();s.setHours(h,m,0,0);const d=Math.floor((now-s)/1000);return d<0?0:d;}
 function fmtSecs(s){return String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0');}
@@ -967,16 +1023,16 @@ function renderLog(){
     let tiempoCell='—';
     if(r.arranque&&!r.fin){
       const s=elapsedSecs(r.arranque),over=s!==null&&s>1800;
-      tiempoCell=`<span id="tmr-${r.oc}" style="font-weight:700;color:${over?'#dc2626':'#16a34a'};font-variant-numeric:tabular-nums">${s!==null?fmtSecs(s):'00:00'}</span>${over?'<div style="color:#dc2626;font-size:10px;font-weight:700">⚠ Excedido</div>':'<span id="twrn-${r.oc}" style="display:none"><div style="color:#dc2626;font-size:10px;font-weight:700">⚠ Excedido</div></span>'}`;
+      tiempoCell=`<span id="tmr-${r.oc}" style="font-weight:700;color:${over?'#dc2626':'#16a34a'};font-variant-numeric:tabular-nums">${s!==null?fmtSecs(s):'00:00'}</span>${over?'<div style="color:#dc2626;font-size:10px;font-weight:700">⚠ Excedido</div>':'<span id="twrn-${r.oc}" style="display:none"></span>'}`;
     } else if(r.arranque&&r.fin){
       const[ah,am]=r.arranque.split(':').map(Number),[fh,fm]=r.fin.split(':').map(Number);
       const mins=(fh*60+fm)-(ah*60+am),over=mins>30;
       tiempoCell=`<span style="font-weight:700;color:${over?'#dc2626':'#16a34a'}">${String(mins).padStart(2,'0')}m</span>${over?'<div style="color:#dc2626;font-size:10px;font-weight:700">⚠ Excedido</div>':''}`;
     }
-    const tNum=r.tar_est||(()=>{const t=calcTarimas(r.art,r.qty);return t?t.tarimas:null;})();
+    const tarCell=r.tar_manual?`<span style="font-weight:700;color:#1d4ed8;font-size:16px">${r.tar_manual}</span>`:'—';
     const bg=ri%2===0?'':'background:#f8fafc';
     return`<tr style="border-bottom:1px solid #f1f5f9;${bg}">
-      <td style="padding:12px 10px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.oc}</td>
+      <td style="padding:12px 10px"><span class="oc-link" onclick="mostrarDetalleOC('${r.oc}')">${r.oc}</span></td>
       <td style="padding:12px 10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.fecha||'—'}</td>
       <td style="padding:12px 10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${r.prov||''}">${r.prov||'—'}</td>
       <td style="padding:12px 10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${r.desc||''}">${r.desc||'—'}</td>
@@ -988,11 +1044,11 @@ function renderLog(){
       <td style="padding:12px 10px;white-space:nowrap">${r.arranque||'—'}</td>
       <td style="padding:12px 10px;white-space:nowrap">${r.fin||'—'}</td>
       <td style="padding:12px 10px">${tiempoCell}</td>
-      <td style="padding:12px 10px;font-weight:700;color:#1d4ed8;font-size:16px">${tNum||'—'}</td>
+      <td style="padding:12px 10px">${tarCell}</td>
       <td style="padding:12px 10px;font-weight:600">${r.confirmacion||'—'}</td>
       <td style="padding:12px 10px"><span class="pill ${pm[r.estado]||'p-p'}">${r.estado||'pendiente'}</span></td>
       <td style="padding:12px 10px;white-space:nowrap">
-        <button class="btn-accion btn-edit" onclick="pedirPassAccion('edit','${r.oc}')">✏️ Editar</button>
+        <button class="btn-accion btn-edit" onclick="pedirPassAccion('edit','${r.oc}')">✏️</button>
         <button class="btn-accion btn-del" style="margin-left:4px" onclick="pedirPassAccion('delete','${r.oc}')">🗑️</button>
       </td>
     </tr>`;
@@ -1004,25 +1060,24 @@ function renderLog(){
         const el=document.getElementById('tmr-'+r.oc);if(!el)return;
         const s=elapsedSecs(r.arranque),over=s>1800;
         el.style.color=over?'#dc2626':'#16a34a';el.textContent=fmtSecs(s);
-        const w=document.getElementById('twrn-'+r.oc);if(w)w.style.display=over?'inline':'none';
       });
     },1000);
   }
 }
 
-// ══════════════════════════════════════════
+// ══════════════════════════════
 // LOG MOD
-// ══════════════════════════════════════════
+// ══════════════════════════════
 function renderLogMod(){
   const filtOC=(document.getElementById('log-filter-oc').value||'').toLowerCase();
   const filtTipo=document.getElementById('log-filter-tipo').value||'';
   const tbody=document.getElementById('log-mod-body');
-  let filtered=logMods.filter(l=>{
+  const filtered=logMods.filter(l=>{
     if(filtOC&&!l.oc.toLowerCase().includes(filtOC))return false;
     if(filtTipo&&l.tipo!==filtTipo)return false;
     return true;
   });
-  if(!filtered.length){tbody.innerHTML='<tr><td colspan="5" style="text-align:center;color:#94a3b8;padding:24px;font-size:13px">Sin registros en el log.</td></tr>';return;}
+  if(!filtered.length){tbody.innerHTML='<tr><td colspan="5" style="text-align:center;color:#94a3b8;padding:24px;font-size:13px">Sin registros.</td></tr>';return;}
   const colMap={nueva:['#dcfce7','#15803d','📥 Nueva OC'],edicion:['#dbeafe','#1d4ed8','✏️ Edición'],eliminacion:['#fee2e2','#b91c1c','🗑️ Eliminación']};
   tbody.innerHTML=filtered.map((l,i)=>{
     const[bg,tc,lbl]=colMap[l.tipo]||['#f1f5f9','#475569','📋 Evento'];
@@ -1036,13 +1091,13 @@ function renderLogMod(){
   }).join('');
 }
 
-// ══════════════════════════════════════════
-// EXPORTAR CSV
-// ══════════════════════════════════════════
+// ══════════════════════════════
+// EXPORTAR
+// ══════════════════════════════
 function exportarCSV(){
-  if(!records.length){alert('Sin datos para exportar.');return;}
-  const cols=['OC','Proveedor','Desc','Art','Fecha','Planta','Unidad','Sem','Mes','Hora','Kg Llegar','Reporte','Entrada','Salida','Arranque','Fin','Est.Tarimas','Conf','Comentarios','Estado'];
-  const rows=records.map(r=>[r.oc,r.prov,r.desc,r.art,r.fecha,r.planta,r.unidad,r.semana,r.mes,r.hora,r.kg_llegar,r.reporte,r.entrada,r.salida,r.arranque,r.fin,r.tar_est,r.confirmacion,r.comentarios,r.estado].map(v=>'"'+(v||'').replace(/"/g,'""')+'"').join(','));
+  if(!records.length){alert('Sin datos.');return;}
+  const cols=['OC','Proveedor','Descripcion','Articulo','Fecha','Planta','Unidad','Sem','Mes','Hora','Cant.Llegar','Tarimas','Reporte','Entrada','Salida','Inicio','Fin','Conf','Comentarios','Estado'];
+  const rows=records.map(r=>[r.oc,r.prov,r.desc,r.art,r.fecha,r.planta,r.unidad,r.semana,r.mes,r.hora,r.kg_llegar,r.tar_manual,r.reporte,r.entrada,r.salida,r.arranque,r.fin,r.confirmacion,r.comentarios,r.estado].map(v=>'"'+(v||'').replace(/"/g,'""')+'"').join(','));
   const csv=[cols.join(','),...rows].join('\n');
   const a=document.createElement('a');
   a.href='data:text/csv;charset=utf-8,\uFEFF'+encodeURIComponent(csv);
@@ -1050,9 +1105,9 @@ function exportarCSV(){
   a.click();
 }
 
-// ══════════════════════════════════════════
+// ══════════════════════════════
 // CALENDARIO
-// ══════════════════════════════════════════
+// ══════════════════════════════
 let calBase=new Date();calBase.setDate(1);
 function calNav(dir){calBase.setMonth(calBase.getMonth()+dir);renderCalendario();}
 function calGoToday(){calBase=new Date();calBase.setDate(1);renderCalendario();}
@@ -1089,7 +1144,7 @@ function renderCalendario(){
     const grid=document.createElement('div');
     grid.style.cssText='display:grid;grid-template-columns:repeat(7,1fr);gap:4px';
     dias.forEach(d=>{const th=document.createElement('div');th.style.cssText='text-align:center;font-size:11px;font-weight:600;color:#94a3b8;padding:4px 0';th.textContent=d;grid.appendChild(th);});
-    for(let i=0;i<primerDia;i++){grid.appendChild(document.createElement('div'));}
+    for(let i=0;i<primerDia;i++)grid.appendChild(document.createElement('div'));
     for(let d=1;d<=diasEnMes;d++){
       const fecha=new Date(año,mes,d),key=fecha.toISOString().slice(0,10);
       const ocs=byDate[key]||[],esHoy=fecha.getTime()===today.getTime(),esPasado=fecha<today;
@@ -1105,8 +1160,8 @@ function renderCalendario(){
       ocs.slice(0,3).forEach(r=>{const tipo=getTipo(r.art,r.desc).label,col=tipoColor[tipo]||tipoColor.OTRO;const chip=document.createElement('div');chip.style.cssText=`font-size:9px;font-weight:600;padding:1px 4px;border-radius:3px;margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;background:${col.bg};color:${col.text};border:1px solid ${col.border}`;chip.textContent=`${r.oc} ${(r.prov||'').split(' ')[0]}`;cell.appendChild(chip);});
       if(ocs.length>3){const more=document.createElement('div');more.style.cssText='font-size:9px;color:#94a3b8;text-align:right';more.textContent=`+${ocs.length-3} más`;cell.appendChild(more);}
       if(ocs.length){
-        const tarTotal=ocs.reduce((s,r)=>{const t=r.tar_est||0;return s+Number(t);},0);
-        if(tarTotal>0){const tl=document.createElement('div');tl.style.cssText='font-size:9px;color:#64748b;margin-top:2px;text-align:right';tl.textContent=`~${Math.round(tarTotal)} tar.`;cell.appendChild(tl);}
+        const tarTotal=ocs.reduce((s,r)=>s+Number(r.tar_manual||0),0);
+        if(tarTotal>0){const tl=document.createElement('div');tl.style.cssText='font-size:9px;color:#64748b;margin-top:2px;text-align:right';tl.textContent=`${Math.round(tarTotal)} tar.`;cell.appendChild(tl);}
         cell.onclick=()=>showDayModal(key,ocs,meses,tipoColor);
         cell.style.cursor='pointer';
       }
@@ -1126,18 +1181,17 @@ function showDayModal(key,ocs,meses,tipoColor){
   const pm={pendiente:'p-p',dentro:'p-d',fuera:'p-f',recibido:'p-r'};
   document.getElementById('cal-modal-body').innerHTML=ocs.map(r=>{
     const tipo=getTipo(r.art,r.desc);
-    const tar=r.tar_est||(calcTarimas(r.art,r.qty)?calcTarimas(r.art,r.qty).tarimas:'—');
     return`<div style="border:1px solid #e2e8f0;border-radius:8px;padding:10px 12px;margin-bottom:8px">
       <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
-        <strong style="color:#1d4ed8">OC ${r.oc}</strong>
+        <strong style="color:#1d4ed8;cursor:pointer;text-decoration:underline;text-decoration-style:dotted" onclick="document.getElementById('cal-modal').style.display='none';mostrarDetalleOC('${r.oc}')">OC ${r.oc}</strong>
         <span class="tipo-tag ${tipo.cls}">${tipo.label}</span>
         <span class="pill ${pm[r.estado]||'p-p'}" style="margin-left:auto">${r.estado||'pendiente'}</span>
       </div>
-      <div style="font-size:12px;color:#475569;margin-bottom:2px">${r.prov||'—'}</div>
+      <div style="font-size:12px;color:#475569;margin-bottom:2px;font-weight:500">${r.prov||'—'}</div>
       <div style="font-size:11px;color:#64748b;margin-bottom:4px">${r.desc||'—'}</div>
       <div style="display:flex;gap:12px;font-size:11px;color:#64748b;flex-wrap:wrap">
         <span>🕐 ${r.hora||'Sin hora'}</span>
-        <span>📦 ${tar} tarimas est.</span>
+        <span>📦 ${r.tar_manual||'—'} tarimas</span>
         <span>🚛 ${r.unidad||'—'}</span>
         <span>🏭 ${r.planta||'—'}</span>
       </div>
