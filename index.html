@@ -294,10 +294,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 
   <div class="sec" style="margin-top:4px"><i class="ti ti-calendar"></i> Programación de llegada</div>
   <div class="fg">
-    <div class="fl"><label>Fecha de llegada</label><input type="date" id="c-fecha"></div>
+    <div class="fl"><label>Fecha de llegada</label><input type="date" id="c-fecha" onchange="autoSemMes()"></div>
     <div class="fl"><label>Hora programada</label><input type="time" id="c-hora"></div>
-    <div class="fl"><label>Semana</label><input type="number" id="c-semana" placeholder="Sem #" min="1" max="53"></div>
-    <div class="fl"><label>Mes</label><select id="c-mes"><option value="">Mes...</option><option>ENE</option><option>FEB</option><option>MAR</option><option>ABR</option><option>MAY</option><option>JUN</option><option>JUL</option><option>AGO</option><option>SEP</option><option>OCT</option><option>NOV</option><option>DIC</option></select></div>
+    <div class="fl"><label>Semana</label><div class="ro" id="c-semana-display" style="color:#64748b;font-size:13px">— se calcula automático</div><input type="hidden" id="c-semana"></div>
+    <div class="fl"><label>Mes</label><div class="ro" id="c-mes-display" style="color:#64748b;font-size:13px">— se calcula automático</div><input type="hidden" id="c-mes"></div>
     <div class="fl"><label>Almacén</label><select id="c-planta"><option value="">Seleccionar...</option><option>PLANTA</option><option>CEDIS</option></select></div>
     <div class="fl"><label>Tipo de unidad</label><select id="c-unidad"><option value="">Seleccionar...</option><option>CHICO</option><option>GRANDE</option><option>TRAILER</option></select></div>
   </div>
@@ -643,27 +643,32 @@ function cargarArchivoOC(input){
       if(lines.length<2){status.textContent='⚠ Archivo vacío';return;}
       const sep=lines[0].includes('\t')?'\t':',';
       const headers=lines[0].split(sep).map(h=>h.trim().replace(/^"|"$/g,'').replace(/[\u2018\u2019\u201A\u201B]/g,"'").replace(/\s+/g,' ').toLowerCase());
+      console.log('Headers:', headers);
+      // Mapeo FORZADO por posición conocida del query SAP
+      // 0=DocNum, 2=FechaNecesaria, 5=ItemCode, 6=Solicitado, 13=Codigo, 14=Proveedor, 15=Descripción
+      const idx={oc:0, fecha:2, art:5, qty:6, cod:13, prov:14, desc:15};
+      // intentar detectar por nombre como verificación adicional
       const find=kws=>headers.findIndex(h=>kws.some(k=>h.includes(k)));
-      const idx={
-        oc:find(['número de documento','numero de documento','documento']),
+      const byName={
+        oc:   find(['número de documento','numero de documento']),
         fecha:find(['fecha necesaria']),
-        art:find(['número de artículo','numero de articulo','artículo','articulo']),
-        qty:find(['solicitado']),
-        cod:find(['codigo','código']),
-        prov:find(['proveedor']),
-        desc:find(['descripci','dscription'])
+        art:  find(['número de artículo','numero de articulo','itemcode']),
+        qty:  find(['solicitado']),
+        cod:  find(['codigo','código']),
+        prov: find(['proveedor','cardname']),
+        desc: find(['descripci','dscription'])
       };
-      if(idx.oc<0)idx.oc=0;if(idx.fecha<0)idx.fecha=2;if(idx.art<0)idx.art=5;
-      if(idx.qty<0)idx.qty=6;if(idx.cod<0)idx.cod=13;if(idx.prov<0)idx.prov=14;if(idx.desc<0)idx.desc=15;
+      // usar por nombre solo si coincide razonablemente
+      Object.keys(byName).forEach(k=>{ if(byName[k]>=0) idx[k]=byName[k]; });
+      console.log('Índices finales:', idx);
       const nuevas=[];
       for(let i=1;i<lines.length;i++){
         const cols=lines[i].split(sep).map(c=>c.trim().replace(/^"|"$/g,''));
         const oc=cols[idx.oc]||'';
-        if(!oc||isNaN(Number(oc.replace(/,/g,''))))continue;
+        // solo saltar filas donde el número de documento no sea numérico
+        if(!oc||isNaN(Number(oc.replace(/[,.\s]/g,''))))continue;
         const prov=cols[idx.prov]||'';
         const desc=cols[idx.desc]||'';
-        // validar que proveedor no sea un número (evita mapeo incorrecto)
-        if(prov&&!isNaN(Number(prov.replace(/[.,]/g,''))))continue;
         nuevas.push({oc,fecha:cols[idx.fecha]||'',art:cols[idx.art]||'',qty:cols[idx.qty]||'',cod:cols[idx.cod]||'',prov,desc});
       }
       if(!nuevas.length){status.textContent='⚠ No se encontraron OC';return;}
@@ -679,6 +684,24 @@ function cargarArchivoOC(input){
 // ══════════════════════════════
 // BÚSQUEDA OC
 // ══════════════════════════════
+function autoSemMes(){
+  const val=document.getElementById('c-fecha').value;
+  if(!val)return;
+  const d=new Date(val+'T00:00:00');
+  // semana ISO
+  const tmp=new Date(d.getTime());
+  tmp.setHours(0,0,0,0);
+  tmp.setDate(tmp.getDate()+3-(tmp.getDay()+6)%7);
+  const week1=new Date(tmp.getFullYear(),0,4);
+  const sem=1+Math.round(((tmp.getTime()-week1.getTime())/86400000-3+(week1.getDay()+6)%7)/7);
+  const meses=['ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SEP','OCT','NOV','DIC'];
+  const mes=meses[d.getMonth()];
+  document.getElementById('c-semana').value=sem;
+  document.getElementById('c-mes').value=mes;
+  document.getElementById('c-semana-display').textContent=`Sem ${sem}`;
+  document.getElementById('c-mes-display').textContent=mes;
+}
+
 function buscarOC(val,ctx){
   const sgId=ctx==='compras'?'oc-suggest':ctx==='vig'?'oc-suggest-vig':'oc-suggest-rec';
   const sg=document.getElementById(sgId);
@@ -729,8 +752,12 @@ function selectOC(oc,ctx){
             <div onclick="pickLine(${i},'${oc}')" style="flex:1;cursor:pointer">
               <span style="font-weight:600;color:#1d4ed8;font-size:11px">Partida ${i+1}</span>
               <span class="tipo-tag ${tipo.cls}">${tipo.label}</span>
-              <div style="color:#1e293b;margin-top:3px;font-size:13px;font-weight:500">${l.desc}</div>
-              <div style="color:#64748b;font-size:11px;margin-top:2px">OC: <strong>${qNum.toLocaleString()}</strong> &nbsp;|&nbsp; Art: ${l.art}</div>
+              <div style="color:#1e293b;margin-top:3px;font-size:13px;font-weight:500">${l.desc||'Sin descripción'}</div>
+              <div style="color:#64748b;font-size:11px;margin-top:2px">
+                Art: <strong style="color:#1e293b">${l.art||'—'}</strong> &nbsp;|&nbsp; 
+                Cant. OC: <strong style="color:#1e293b">${qNum.toLocaleString()}</strong> &nbsp;|&nbsp;
+                Prov: <strong style="color:#1e293b">${l.prov||'—'}</strong>
+              </div>
             </div>
             <div style="display:flex;align-items:center;gap:6px" onclick="event.stopPropagation()">
               <label style="font-size:11px;color:#64748b;white-space:nowrap">Cant. a llegar:</label>
