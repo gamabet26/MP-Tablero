@@ -430,13 +430,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
   <div style="background:#fff;border-radius:12px;border:1px solid #e2e8f0;overflow:hidden">
     <table class="tbl" style="table-layout:fixed;width:100%">
       <colgroup>
-        <col style="width:5%"><col style="width:7%"><col style="width:11%"><col style="width:11%">
-        <col style="width:5%"><col style="width:5%"><col style="width:5%"><col style="width:5%">
-        <col style="width:5%"><col style="width:5%"><col style="width:5%">
-        <col style="width:7%"><col style="width:4%"><col style="width:4%"><col style="width:6%"><col style="width:10%">
+        <col style="width:6%"><col style="width:8%"><col style="width:13%">
+        <col style="width:6%"><col style="width:6%"><col style="width:6%"><col style="width:6%">
+        <col style="width:6%"><col style="width:6%"><col style="width:6%">
+        <col style="width:8%"><col style="width:5%"><col style="width:5%"><col style="width:7%"><col style="width:11%">
       </colgroup>
       <thead><tr>
-        <th>OC #</th><th>FECHA</th><th>PROVEEDOR</th><th>PRODUCTO</th>
+        <th>OC #</th><th>FECHA</th><th>PROVEEDOR</th>
         <th>PLANTA</th><th>UNIDAD</th><th>REPORTE</th><th>ENTRADA</th><th>SALIDA</th>
         <th>INICIO</th><th>FIN</th><th>⏱ DESCARGA</th>
         <th>T.</th><th>CONF.</th><th>ESTADO</th><th>ACCIONES</th>
@@ -861,7 +861,13 @@ async function guardarCompra(){
   const tmEl=document.getElementById('c-tarimas-manual');
   const tarManual=tmEl&&tmEl.value?Number(tmEl.value):null;
   const existing=records.find(r=>r.oc===oc)||{};
-  const esNueva=!existing.oc;
+        // Guardar con prov y desc del TABLERO si el registro no los tiene bien
+      const lineasOC=TABLERO.filter(t=>t.oc===oc);
+      if(lineasOC.length&&(!rec.prov||rec.prov.length<=4)){
+        rec.prov=lineasOC[0].prov;
+        rec.desc=lineasOC[0].desc;
+        rec.art=lineasOC[0].art;
+      }
   const rec={
     oc,art,qty,
     prov:document.getElementById('c-prov').textContent,
@@ -984,7 +990,9 @@ async function ejecutarEliminacion(oc){
 function mostrarDetalleOC(oc){
   const rec=records.find(r=>r.oc===oc);
   const lines=TABLERO.filter(r=>r.oc===oc);
-  document.getElementById('oc-detail-title').textContent=`OC ${oc} — ${rec?rec.prov:''}`;
+  // proveedor real: del TABLERO si está cargado, sino del registro
+  const provMostrar=lines.length?lines[0].prov:(rec?rec.prov:'');
+  document.getElementById('oc-detail-title').textContent=`OC ${oc} — ${provMostrar}`;
   const pm={pendiente:'p-p',dentro:'p-d',fuera:'p-f',recibido:'p-r'};
   let html='';
   // info general
@@ -1062,7 +1070,6 @@ function renderLog(){
       <td style="padding:12px 10px"><span class="oc-link" onclick="mostrarDetalleOC('${r.oc}')">${r.oc}</span></td>
       <td style="padding:12px 10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.fecha||'—'}</td>
       <td style="padding:12px 10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${r.prov||''}">${r.prov||'—'}</td>
-      <td style="padding:12px 10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${r.desc||''}">${r.desc||'—'}</td>
       <td style="padding:12px 10px;white-space:nowrap">${r.planta||'—'}</td>
       <td style="padding:12px 10px;white-space:nowrap">${r.unidad||'—'}</td>
       <td style="padding:12px 10px;white-space:nowrap">${r.planta==='CEDIS'?'<span style="color:#94a3b8;font-style:italic;font-size:11px">N/A</span>':(r.reporte||'—')}</td>
