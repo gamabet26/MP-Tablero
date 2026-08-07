@@ -631,6 +631,26 @@ function clearStamp(id,btnId,tsId,clearId){
 // ══════════════════════════════
 // CSV
 // ══════════════════════════════
+// Parser que respeta comillas: evita que comas dentro de campos numéricos
+// entre comillas (ej. "23,750.00") rompan la alineación de columnas.
+function parseCSVLine(line,sep){
+  const cols=[];
+  let cur='';
+  let inQuotes=false;
+  for(let i=0;i<line.length;i++){
+    const ch=line[i];
+    if(ch==='"'){
+      if(inQuotes && line[i+1]==='"'){cur+='"';i++;}
+      else inQuotes=!inQuotes;
+    } else if(ch===sep && !inQuotes){
+      cols.push(cur);cur='';
+    } else {
+      cur+=ch;
+    }
+  }
+  cols.push(cur);
+  return cols.map(c=>c.trim());
+}
 function cargarArchivoOC(input){
   const file=input.files[0];if(!file)return;
   const status=document.getElementById('csv-status');
@@ -642,7 +662,7 @@ function cargarArchivoOC(input){
       const lines=text.split('\n').filter(l=>l.trim());
       if(lines.length<2){status.textContent='⚠ Archivo vacío';return;}
       const sep=lines[0].includes('\t')?'\t':',';
-      const headers=lines[0].split(sep).map(h=>h.trim().replace(/^"|"$/g,'').replace(/[\u2018\u2019\u201A\u201B]/g,"'").replace(/\s+/g,' ').toLowerCase());
+      const headers=parseCSVLine(lines[0],sep).map(h=>h.trim().replace(/^"|"$/g,'').replace(/[\u2018\u2019\u201A\u201B]/g,"'").replace(/\s+/g,' ').toLowerCase());
       console.log('Headers:', headers);
       // Mapeo FORZADO por posición conocida del query SAP
       // 0=DocNum, 2=FechaNecesaria, 5=ItemCode, 6=Solicitado, 13=Codigo, 14=Proveedor, 15=Descripción
@@ -663,7 +683,7 @@ function cargarArchivoOC(input){
       console.log('Índices finales:', idx);
       const nuevas=[];
       for(let i=1;i<lines.length;i++){
-        const cols=lines[i].split(sep).map(c=>c.trim().replace(/^"|"$/g,''));
+        const cols=parseCSVLine(lines[i],sep).map(c=>c.replace(/^"|"$/g,''));
         const oc=cols[idx.oc]||'';
         // solo saltar filas donde el número de documento no sea numérico
         if(!oc||isNaN(Number(oc.replace(/[,.\s]/g,''))))continue;
@@ -861,13 +881,7 @@ async function guardarCompra(){
   const tmEl=document.getElementById('c-tarimas-manual');
   const tarManual=tmEl&&tmEl.value?Number(tmEl.value):null;
   const existing=records.find(r=>r.oc===oc)||{};
-        // Guardar con prov y desc del TABLERO si el registro no los tiene bien
-      const lineasOC=TABLERO.filter(t=>t.oc===oc);
-      if(lineasOC.length&&(!rec.prov||rec.prov.length<=4)){
-        rec.prov=lineasOC[0].prov;
-        rec.desc=lineasOC[0].desc;
-        rec.art=lineasOC[0].art;
-      }
+  const esNueva=!records.some(r=>r.oc===oc);
   const rec={
     oc,art,qty,
     prov:document.getElementById('c-prov').textContent,
@@ -885,11 +899,46 @@ async function guardarCompra(){
     arranque:existing.arranque||'',fin:existing.fin||'',
     confirmacion:existing.confirmacion||'',comentarios:existing.comentarios||''
   };
+  // Guardar con prov y desc del TABLERO si el registro no los tiene bien
+  const lineasOC=TABLERO.filter(t=>t.oc===oc);
+  if(lineasOC.length&&(!rec.prov||rec.prov.length<=4)){
+    rec.prov=lineasOC[0].prov;
+    rec.desc=lineasOC[0].desc;
+    rec.art=lineasOC[0].art;
+  }
   await saveDB(rec);
   addLog(esNueva?'nueva':'edicion',oc,rec.prov,
     esNueva?`Nueva OC. Prov: ${rec.prov} | Prod: ${rec.desc} | Fecha: ${rec.fecha} | Planta: ${rec.planta} | Tarimas: ${tarManual||'no especificado'}`
            :`Actualizada. Fecha: ${rec.fecha} | Planta: ${rec.planta} | Tarimas: ${tarManual||'no especificado'}`);
   alert('✅ OC '+oc+' guardada.');
+  limpiarFormularioCompras();
+}
+
+function limpiarFormularioCompras(){
+  const oc=document.getElementById('c-oc');if(oc)oc.value='';
+  const prov=document.getElementById('c-prov');
+  if(prov){prov.textContent='—';prov.classList.add('pend');}
+  document.getElementById('c-fields')&&(document.getElementById('c-fields').style.display='none');
+  const art=document.getElementById('c-art');if(art)art.textContent='—';
+  const desc=document.getElementById('c-desc');if(desc)desc.textContent='—';
+  const qty=document.getElementById('c-qty');if(qty)qty.textContent='—';
+  const tipo=document.getElementById('c-tipo');if(tipo)tipo.textContent='—';
+  const fecha=document.getElementById('c-fecha');if(fecha)fecha.value='';
+  const hora=document.getElementById('c-hora');if(hora)hora.value='';
+  const semDisp=document.getElementById('c-semana-display');if(semDisp)semDisp.textContent='— se calcula automático';
+  const mesDisp=document.getElementById('c-mes-display');if(mesDisp)mesDisp.textContent='— se calcula automático';
+  const sem=document.getElementById('c-semana');if(sem)sem.value='';
+  const mes=document.getElementById('c-mes');if(mes)mes.value='';
+  const planta=document.getElementById('c-planta');if(planta)planta.value='';
+  const unidad=document.getElementById('c-unidad');if(unidad)unidad.value='';
+  const tm=document.getElementById('c-tarimas-manual');if(tm)tm.value='';
+  const kgInp=document.getElementById('kg-single-input');if(kgInp)kgInp.value='';
+  const kgRes=document.getElementById('kg-single-result');if(kgRes)kgRes.innerHTML='';
+  const kgResumen=document.getElementById('kg-resumen');if(kgResumen)kgResumen.style.display='none';
+  const linesContainer=document.getElementById('lines-container');if(linesContainer)linesContainer.innerHTML='';
+  const suggest=document.getElementById('oc-suggest');if(suggest)suggest.style.display='none';
+  _tarManual=null;_kgLlegar=0;
+  if(oc)oc.focus();
 }
 
 async function guardarVigilancia(){
