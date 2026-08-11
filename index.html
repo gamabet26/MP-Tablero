@@ -782,9 +782,35 @@ function buscarOC(val,ctx){
   const sgId=ctx==='compras'?'oc-suggest':ctx==='vig'?'oc-suggest-vig':'oc-suggest-rec';
   const sg=document.getElementById(sgId);
   if(!val||val.length<2){sg.style.display='none';return;}
+
+  if(ctx!=='compras'){
+    // Vigilancia y Recibo solo trabajan con OCs que Compras ya registró
+    // (visibles en Historial/Calendario) — nunca dependen del CSV en memoria.
+    const byOCr=records.filter(r=>r.oc.includes(val));
+    const byProvr=records.filter(r=>(r.prov||'').toLowerCase().includes(val.toLowerCase()));
+    const allR=[...new Map([...byOCr,...byProvr].map(r=>[r.oc,r])).values()].slice(0,20);
+    if(!allR.length){sg.style.display='none';return;}
+    sg.innerHTML=allR.map(r=>{
+      const tipo=getTipo(r.art,r.desc);
+      return`<div class="oc-item" onclick="selectOC('${r.oc}','${ctx}')">
+        <span style="font-weight:600;color:#1d4ed8;font-size:12px">OC ${r.oc}</span>
+        <span class="tipo-tag ${tipo.cls}">${tipo.label}</span>
+        <div style="color:#1e293b;font-size:12px;margin-top:2px;font-weight:500">${r.prov||'—'}</div>
+        <div style="color:#64748b;font-size:11px">${(r.desc||'').substring(0,60)}${(r.desc||'').length>60?'...':''}</div>
+      </div>`;
+    }).join('');
+    sg.style.display='block';
+    return;
+  }
+
   const byOC=TABLERO.filter(r=>r.oc.includes(val));
   const byProv=TABLERO.filter(r=>(r.prov||'').toLowerCase().includes(val.toLowerCase()));
-  const all=[...new Map([...byOC,...byProv].map(r=>[r.oc,r])).values()].slice(0,20);
+  // Fallback: si el CSV no se ha vuelto a cargar en esta sesión (ej. se cerró la
+  // pestaña), TABLERO está vacío. Se busca también en records (Firestore),
+  // que sí persiste entre sesiones, para OCs ya registradas anteriormente.
+  const byOCr=records.filter(r=>r.oc.includes(val)).map(r=>({oc:r.oc,prov:r.prov,desc:r.desc,art:r.art,qty:r.qty}));
+  const byProvr=records.filter(r=>(r.prov||'').toLowerCase().includes(val.toLowerCase())).map(r=>({oc:r.oc,prov:r.prov,desc:r.desc,art:r.art,qty:r.qty}));
+  const all=[...new Map([...byOC,...byProv,...byOCr,...byProvr].map(r=>[r.oc,r])).values()].slice(0,20);
   if(!all.length){sg.style.display='none';return;}
   sg.innerHTML=all.map(r=>{
     const tipo=getTipo(r.art,r.desc);
@@ -805,7 +831,52 @@ let _tarManual=null,_kgLlegar=0;
 
 function selectOC(oc,ctx){
   document.querySelectorAll('.oc-suggest').forEach(s=>s.style.display='none');
-  const lines=TABLERO.filter(r=>r.oc===oc);
+
+  if(ctx!=='compras'){
+    // Vigilancia y Recibo solo usan records (OCs ya registradas por Compras).
+    const rec=records.find(r=>r.oc===oc);
+    if(!rec)return;
+    if(ctx==='vig'){
+      document.getElementById('v-oc').value=oc;
+      document.getElementById('v-prov').textContent=rec.prov||'—';
+      document.getElementById('v-prov').classList.remove('pend');
+      const planta=rec.planta||'';
+      document.getElementById('v-unidad').textContent=rec.unidad||'—';
+      document.getElementById('v-planta').textContent=planta||'—';
+      const esCedis=planta==='CEDIS';
+      document.getElementById('vig-acceso-section').style.display=esCedis?'none':'block';
+      document.getElementById('vig-cedis-note').style.display=esCedis?'flex':'none';
+    } else {
+      document.getElementById('r-oc').value=oc;
+      document.getElementById('r-oc-display').textContent=oc;
+      document.getElementById('r-prov').textContent=rec.prov||'—';
+      document.getElementById('r-prov').classList.remove('pend');
+      document.getElementById('r-desc').textContent=rec.desc||'—';
+      document.getElementById('r-desc').classList.remove('pend');
+      const box=document.getElementById('r-tar-box'),emp=document.getElementById('r-tar-empty');
+      const tarimas=rec.tar_manual||null;
+      if(tarimas){
+        document.getElementById('r-tar-content').innerHTML=`
+          <div style="display:flex;align-items:baseline;gap:10px">
+            <span style="font-size:36px;font-weight:700;color:#1d4ed8">${tarimas}</span>
+            <span style="font-size:14px;color:#1e293b;font-weight:500">tarimas programadas</span>
+          </div>
+          ${rec.kg_llegar?`<div style="font-size:12px;color:#64748b;margin-top:4px">Cantidad a llegar: ${Number(rec.kg_llegar).toLocaleString()}</div>`:''}`;
+        box.style.display='block';emp.style.display='none';
+      } else {
+        box.style.display='none';emp.style.display='block';
+      }
+    }
+    return;
+  }
+
+  let lines=TABLERO.filter(r=>r.oc===oc);
+  if(!lines.length){
+    // Fallback: la OC no está en el CSV cargado en esta sesión, pero ya existe
+    // guardada en Firestore de un registro previo — se usa esa info.
+    const recFallback=records.find(r=>r.oc===oc);
+    if(recFallback)lines=[{oc:recFallback.oc,prov:recFallback.prov,desc:recFallback.desc,art:recFallback.art,qty:recFallback.qty}];
+  }
   if(!lines.length)return;
   if(ctx==='compras'){
     document.getElementById('c-oc').value=oc;
@@ -851,38 +922,6 @@ function selectOC(oc,ctx){
           <input type="number" id="c-tarimas-manual" min="0" placeholder="Ej. 12"
             style="width:110px;padding:7px 10px;border:1px solid #bfdbfe;border-radius:8px;font-size:14px;font-family:inherit;outline:none;color:#1d4ed8;background:#fff;font-weight:700">
         </div>`;
-    }
-  } else if(ctx==='vig'){
-    document.getElementById('v-oc').value=oc;
-    document.getElementById('v-prov').textContent=lines[0].prov;
-    document.getElementById('v-prov').classList.remove('pend');
-    const rec=records.find(r=>r.oc===oc);
-    const planta=rec&&rec.planta?rec.planta:'';
-    document.getElementById('v-unidad').textContent=rec&&rec.unidad?rec.unidad:'—';
-    document.getElementById('v-planta').textContent=planta||'—';
-    const esCedis=planta==='CEDIS';
-    document.getElementById('vig-acceso-section').style.display=esCedis?'none':'block';
-    document.getElementById('vig-cedis-note').style.display=esCedis?'flex':'none';
-  } else {
-    document.getElementById('r-oc').value=oc;
-    document.getElementById('r-oc-display').textContent=oc;
-    const rec=records.find(r=>r.oc===oc);
-    document.getElementById('r-prov').textContent=lines[0].prov;
-    document.getElementById('r-prov').classList.remove('pend');
-    document.getElementById('r-desc').textContent=rec&&rec.desc?rec.desc:lines[0].desc;
-    document.getElementById('r-desc').classList.remove('pend');
-    const box=document.getElementById('r-tar-box'),emp=document.getElementById('r-tar-empty');
-    const tarimas=rec&&rec.tar_manual?rec.tar_manual:null;
-    if(tarimas){
-      document.getElementById('r-tar-content').innerHTML=`
-        <div style="display:flex;align-items:baseline;gap:10px">
-          <span style="font-size:36px;font-weight:700;color:#1d4ed8">${tarimas}</span>
-          <span style="font-size:14px;color:#1e293b;font-weight:500">tarimas programadas</span>
-        </div>
-        ${rec.kg_llegar?`<div style="font-size:12px;color:#64748b;margin-top:4px">Cantidad a llegar: ${Number(rec.kg_llegar).toLocaleString()}</div>`:''}`;
-      box.style.display='block';emp.style.display='none';
-    } else {
-      box.style.display='none';emp.style.display='block';
     }
   }
 }
