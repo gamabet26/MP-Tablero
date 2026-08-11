@@ -8,6 +8,7 @@
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging.js";
 const fbApp = initializeApp({
   apiKey:"AIzaSyDsgkenlCOso9CYDZ3m1i212tvdlbY4ZR0",
   authDomain:"proyectos-zx1.firebaseapp.com",
@@ -35,6 +36,54 @@ onSnapshot(LOGS_COL, snap => {
 });
 window._fbReady = true;
 window.dispatchEvent(new Event('firebaseReady'));
+
+// ══════════════════════════════
+// PUSH NOTIFICATIONS (FCM)
+// ══════════════════════════════
+// ⚠️ Reemplaza con tu VAPID key: Firebase Console > Configuración del proyecto
+// > Cloud Messaging > "Web Push certificates" > Generate key pair
+const VAPID_KEY = "BI1iGduTd2p1d_IBo4b_toPneA_8xWKIh2Rx5zPFjFMTfuHZ5Pg2BHt3P5lzxU8xPAxDydcaWDTloKfuKZoea48";
+
+window.activarNotificaciones = async function(seccion){
+  try{
+    if(!('serviceWorker' in navigator) || !('PushManager' in window)){
+      alert('Tu navegador no soporta notificaciones push.');
+      return false;
+    }
+    const permiso = await Notification.requestPermission();
+    if(permiso !== 'granted'){
+      alert('Permiso de notificaciones denegado. Actívalo en la configuración del navegador.');
+      return false;
+    }
+    const registration = await navigator.serviceWorker.register('./firebase-messaging-sw.js');
+    const messaging = getMessaging(fbApp);
+    const token = await getToken(messaging, {
+      vapidKey: VAPID_KEY,
+      serviceWorkerRegistration: registration
+    });
+    if(token){
+      await setDoc(doc(collection(db,'zubex_rmp_tokens'), token), {
+        token, seccion: seccion||'general', ts: new Date().toISOString(),
+        ua: navigator.userAgent.slice(0,120)
+      });
+      window._pushActivo = true;
+      window.dispatchEvent(new Event('pushActivado'));
+    }
+    onMessage(messaging, payload => {
+      // La app está abierta en primer plano: mostrar aviso visual propio
+      console.log('Push en primer plano:', payload);
+      if(payload.notification){
+        alert('🔔 '+payload.notification.title+'\n'+payload.notification.body);
+      }
+    });
+    return true;
+  }catch(e){
+    console.error('Error activando notificaciones push:', e);
+    alert('No se pudo activar notificaciones: '+e.message);
+    return false;
+  }
+};
+
 </script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
@@ -594,6 +643,13 @@ function loginSubmit(){
   const p=document.getElementById('login-pass').value;
   if(u===ACCESOS[sec].user&&p===ACCESOS[sec].pass){
     sesiones[sec]=true;m.style.display='none';switchTab(sec);
+    if(!window._pushActivo && 'Notification' in window && Notification.permission!=='denied'){
+      setTimeout(()=>{
+        if(confirm('¿Activar notificaciones push para '+sec+'? Te avisará de movimientos aunque tengas la app cerrada.')){
+          window.activarNotificaciones(sec);
+        }
+      },600);
+    }
   } else {
     document.getElementById('login-error').style.display='block';
     document.getElementById('login-pass').value='';
@@ -952,7 +1008,24 @@ async function guardarVigilancia(){
   rec.salida=stamps['salida']||rec.salida;
   rec.estado=rec.salida?'fuera':'dentro';
   await saveDB(rec);
+  addLog('edicion',oc,rec.prov,`Vigilancia: reporte ${rec.reporte||'—'} | entrada ${rec.entrada||'—'} | salida ${rec.salida||'—'}`);
   alert('✅ Acceso registrado para OC '+oc);
+  limpiarFormularioVigilancia();
+}
+
+function limpiarFormularioVigilancia(){
+  const oc=document.getElementById('v-oc');if(oc)oc.value='';
+  const prov=document.getElementById('v-prov');if(prov){prov.textContent='—';prov.classList.add('pend');}
+  const unidad=document.getElementById('v-unidad');if(unidad){unidad.textContent='—';unidad.classList.add('pend');}
+  const planta=document.getElementById('v-planta');if(planta){planta.textContent='—';planta.classList.add('pend');}
+  ['reporte','entrada','salida'].forEach(id=>{
+    const map={reporte:['btn-reporte','ts-reporte','clear-reporte'],entrada:['btn-entrada','ts-entrada','clear-entrada'],salida:['btn-salida','ts-salida','clear-salida']};
+    clearStamp(id,...map[id]);
+  });
+  const seccion=document.getElementById('vig-acceso-section');if(seccion)seccion.style.display='';
+  const cedisNote=document.getElementById('vig-cedis-note');if(cedisNote)cedisNote.style.display='none';
+  const suggest=document.getElementById('oc-suggest-vig');if(suggest)suggest.style.display='none';
+  if(oc)oc.focus();
 }
 
 async function guardarRecibo(){
@@ -968,8 +1041,27 @@ async function guardarRecibo(){
   rec.comentarios=document.getElementById('r-coments').value;
   rec.estado='recibido';
   await saveDB(rec);
-  if(!prevArr&&rec.arranque)switchTab('historial');
-  else alert('✅ Recibo confirmado para OC '+oc);
+  addLog('edicion',oc,rec.prov,`Recibo: arranque ${rec.arranque||'—'} | fin ${rec.fin||'—'} | confirmación ${rec.confirmacion||'—'}`);
+  if(!prevArr&&rec.arranque){limpiarFormularioRecibo();switchTab('historial');}
+  else{alert('✅ Recibo confirmado para OC '+oc);limpiarFormularioRecibo();}
+}
+
+function limpiarFormularioRecibo(){
+  const oc=document.getElementById('r-oc');if(oc)oc.value='';
+  const ocDisplay=document.getElementById('r-oc-display');if(ocDisplay)ocDisplay.textContent='— sin seleccionar';
+  const prov=document.getElementById('r-prov');if(prov){prov.textContent='—';prov.classList.add('pend');}
+  const desc=document.getElementById('r-desc');if(desc){desc.textContent='—';desc.classList.add('pend');}
+  const tarBox=document.getElementById('r-tar-box');if(tarBox)tarBox.style.display='none';
+  const tarEmpty=document.getElementById('r-tar-empty');if(tarEmpty)tarEmpty.style.display='';
+  const tarContent=document.getElementById('r-tar-content');if(tarContent)tarContent.innerHTML='';
+  const qconf=document.getElementById('q-conf');if(qconf)qconf.value='';
+  ['arranque','fin'].forEach(id=>{
+    const map={arranque:['btn-arranque','ts-arranque','clear-arranque'],fin:['btn-fin','ts-fin','clear-fin']};
+    clearStamp(id,...map[id]);
+  });
+  const coments=document.getElementById('r-coments');if(coments)coments.value='';
+  const suggest=document.getElementById('oc-suggest-rec');if(suggest)suggest.style.display='none';
+  if(oc)oc.focus();
 }
 
 // ══════════════════════════════
