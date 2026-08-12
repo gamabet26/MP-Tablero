@@ -287,6 +287,17 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
   </div>
 </div>
 
+<!-- HELP MODAL -->
+<div id="help-modal" class="modal-overlay">
+  <div class="modal-box" style="max-width:520px;width:95%;max-height:85vh;overflow-y:auto">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+      <h3 id="help-titulo" style="font-size:16px;font-weight:700;color:#1e293b">❓ Ayuda</h3>
+      <button onclick="document.getElementById('help-modal').style.display='none'" style="border:none;background:none;cursor:pointer;font-size:20px;color:#94a3b8">✕</button>
+    </div>
+    <div id="help-contenido" style="font-size:13px;color:#334155;line-height:1.6"></div>
+  </div>
+</div>
+
 <!-- MODAL DETALLE OC -->
 <div id="oc-detail-modal" class="modal-overlay">
   <div class="modal-box" style="max-width:700px;width:95%;max-height:90vh;overflow-y:auto">
@@ -318,6 +329,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 
 <!-- COMPRAS -->
 <div class="panel" id="panel-compras">
+<div style="display:flex;justify-content:flex-end;margin-bottom:8px"><button onclick="mostrarAyuda('compras')" style="display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:99px;border:1px solid #cbd5e1;background:#fff;color:#475569;cursor:pointer;font-size:11px;font-family:inherit;font-weight:600">❓ Ayuda</button></div>
 <div class="card">
   <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:12px">
     <div class="info-note" style="flex:1"><i class="ti ti-info-circle"></i> Escribe el número de OC o proveedor para buscar.</div>
@@ -382,6 +394,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 
 <!-- VIGILANCIA -->
 <div class="panel" id="panel-vigilancia">
+<div style="display:flex;justify-content:flex-end;margin-bottom:8px"><button onclick="mostrarAyuda('vigilancia')" style="display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:99px;border:1px solid #cbd5e1;background:#fff;color:#475569;cursor:pointer;font-size:11px;font-family:inherit;font-weight:600">❓ Ayuda</button></div>
 <div class="info-note" style="margin-bottom:12px"><i class="ti ti-info-circle"></i> Ingresa la OC del proveedor en turno.</div>
 <div class="card">
   <div class="sec">Registro activo</div>
@@ -421,6 +434,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 
 <!-- RECIBO MP -->
 <div class="panel" id="panel-recibo">
+<div style="display:flex;justify-content:flex-end;margin-bottom:8px"><button onclick="mostrarAyuda('recibo')" style="display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:99px;border:1px solid #cbd5e1;background:#fff;color:#475569;cursor:pointer;font-size:11px;font-family:inherit;font-weight:600">❓ Ayuda</button></div>
 <div class="card">
   <div style="display:inline-flex;align-items:center;gap:6px;background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;border-radius:8px;padding:4px 10px;font-size:12px;font-weight:600;margin-bottom:12px"><i class="ti ti-file-text" style="font-size:14px"></i> OC # <span id="r-oc-display">— sin seleccionar</span></div>
   <div class="fg">
@@ -468,6 +482,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
     <select id="cal-range" onchange="renderCalendario()" style="font-size:12px;padding:5px 8px;border:1px solid #cbd5e1;border-radius:8px;background:#fff;color:#1e293b;font-family:inherit">
       <option value="1">1 mes</option><option value="3" selected>3 meses</option><option value="6">6 meses</option><option value="12">Todo el año</option>
     </select>
+    <button onclick="mostrarAyuda('calendario')" style="display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:99px;border:1px solid #cbd5e1;background:#fff;color:#475569;cursor:pointer;font-size:11px;font-family:inherit;font-weight:600">❓ Ayuda</button>
   </div>
   <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px;align-items:center">
     <span style="font-size:11px;display:flex;align-items:center;gap:4px"><span style="width:12px;height:12px;border-radius:3px;background:#ede9fe;border:1px solid #7c3aed;display:inline-block"></span>RESINA</span>
@@ -502,6 +517,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
     </div>
     <button onclick="exportarCSV()" style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:8px;border:1px solid #cbd5e1;background:#fff;color:#1e293b;cursor:pointer;font-size:12px;font-family:inherit"><i class="ti ti-download"></i> Exportar CSV</button>
     <button onclick="exportarExcelMaestro()" style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:8px;border:1px solid #16a34a;background:#f0fdf4;color:#15803d;cursor:pointer;font-size:12px;font-family:inherit;font-weight:600"><i class="ti ti-file-spreadsheet"></i> Excel maestro (recibidas)</button>
+    <button onclick="mostrarAyuda('historial')" style="display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:99px;border:1px solid #cbd5e1;background:#fff;color:#475569;cursor:pointer;font-size:11px;font-family:inherit;font-weight:600">❓ Ayuda</button>
   </div>
   <div style="background:#fff;border-radius:12px;border:1px solid #e2e8f0;overflow:hidden">
     <table class="tbl" style="table-layout:fixed;width:100%">
@@ -536,6 +552,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
         <option value="">Todos</option><option value="nueva">Nueva OC</option><option value="edicion">Edición</option><option value="eliminacion">Eliminación</option>
       </select>
       <button onclick="document.getElementById('log-filter-fecha').value='';document.getElementById('log-filter-oc').value='';document.getElementById('log-filter-tipo').value='';renderLogMod()" style="font-size:12px;padding:6px 10px;border:1px solid #cbd5e1;border-radius:8px;background:#f8fafc;color:#475569;cursor:pointer;font-family:inherit">Limpiar filtros</button>
+      <button onclick="mostrarAyuda('log')" style="display:inline-flex;align-items:center;gap:5px;padding:6px 12px;border-radius:99px;border:1px solid #cbd5e1;background:#fff;color:#475569;cursor:pointer;font-size:11px;font-family:inherit;font-weight:600">❓ Ayuda</button>
     </div>
   </div>
   <div style="background:#fff;border-radius:12px;border:1px solid #e2e8f0;overflow:hidden">
@@ -610,6 +627,81 @@ async function saveLogEntry(entry){
 function addLog(tipo,oc,prov,detalle,motivo){
   const now=new Date();
   saveLogEntry({id:now.getTime()+'_'+oc,ts:now.toISOString(),fecha:now.toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'numeric'}),hora:now.toTimeString().slice(0,5),tipo,oc,prov,detalle,motivo:motivo||''});
+}
+
+// ══════════════════════════════
+// AYUDA / TUTORIALES
+// ══════════════════════════════
+const AYUDA_TITULOS={
+  compras:'❓ Ayuda — Compras',
+  vigilancia:'❓ Ayuda — Vigilancia',
+  recibo:'❓ Ayuda — Recibo MP',
+  calendario:'❓ Ayuda — Calendario',
+  historial:'❓ Ayuda — Historial',
+  log:'❓ Ayuda — Log de auditoría'
+};
+const AYUDA_CONTENIDO={
+  compras:`
+    <p><strong>Objetivo:</strong> registrar las OCs de materia prima para que Vigilancia y Recibo puedan darles seguimiento.</p>
+    <ol style="padding-left:18px;margin:10px 0">
+      <li>Carga el CSV exportado de SAP B1 con el botón "Actualizar OC desde archivo".</li>
+      <li>Escribe el número de OC o proveedor en el buscador y selecciona la sugerencia.</li>
+      <li>Verifica proveedor, descripción, cantidad y tipo de material (se llenan solos).</li>
+      <li>Completa: fecha de llegada, hora, planta, tipo de unidad, cantidad a llegar y tarimas estimadas.</li>
+      <li>Da clic en <strong>"Guardar y notificar"</strong> — se guarda, se registra en el Log y se limpia la pantalla.</li>
+    </ol>
+    <p style="background:#dbeafe;padding:8px 10px;border-radius:6px;color:#1d4ed8"><strong>Nota:</strong> las partidas del CSV quedan guardadas — se pueden consultar después sin volver a subir el archivo.</p>`,
+  vigilancia:`
+    <p><strong>Objetivo:</strong> registrar los tiempos de acceso (reporte, entrada, salida) de las unidades que llegan a entregar materia prima.</p>
+    <ol style="padding-left:18px;margin:10px 0">
+      <li>Busca la OC por número o proveedor — solo aparecen OCs que Compras ya registró.</li>
+      <li>Si el proveedor tiene varias visitas en la semana, revisa la <strong>fecha de llegada</strong> mostrada en cada sugerencia antes de elegir.</li>
+      <li>Registra "Registrar llegada" (reporte), Entrada y Salida conforme vayan ocurriendo. Puedes deshacer cada uno si te equivocas.</li>
+      <li>Si la OC es para CEDIS, el control de accesos se oculta automáticamente.</li>
+      <li>Da clic en <strong>"Confirmar registro"</strong> para guardar y limpiar la pantalla.</li>
+    </ol>`,
+  recibo:`
+    <p><strong>Objetivo:</strong> confirmar la recepción física de la materia prima y registrar los tiempos de descarga.</p>
+    <ol style="padding-left:18px;margin:10px 0">
+      <li>Busca la OC por número o proveedor — revisa la fecha de llegada mostrada en las sugerencias.</li>
+      <li>Selecciona "¿Entrega confirmada?".</li>
+      <li>Registra inicio y fin de descarga (se marca en rojo si excede 30 min).</li>
+      <li>Anota comentarios si aplica (quedan visibles en el Log).</li>
+      <li>Da clic en <strong>"Confirmar recibo"</strong>.</li>
+    </ol>
+    <p style="background:#fef9c3;padding:8px 10px;border-radius:6px;color:#a16207"><strong>Importante:</strong> si ya capturaste inicio + fin + confirmación juntos, la OC se archiva automáticamente en el Excel maestro y desaparece de Historial/Calendario.</p>`,
+  calendario:`
+    <p><strong>Objetivo:</strong> visualizar las fechas de llegada programadas de todas las OCs activas.</p>
+    <ul style="padding-left:18px;margin:10px 0">
+      <li>Cambia la vista entre 1, 3, 6 o 12 meses con el selector.</li>
+      <li>Navega entre periodos con las flechas ‹ › o regresa a hoy con el botón "Hoy".</li>
+      <li>Cada chip de color indica el tipo de material (Resina, Tinta, Solvente, Aditivo, Cartón, Embalaje).</li>
+      <li>El semáforo indica qué días tienen más carga de llegadas.</li>
+    </ul>
+    <p style="color:#64748b">Acceso libre — no requiere usuario ni contraseña.</p>`,
+  historial:`
+    <p><strong>Objetivo:</strong> consultar el detalle de todas las OCs activas (las que aún no se completan del todo en Recibo).</p>
+    <ul style="padding-left:18px;margin:10px 0">
+      <li>Busca por OC o proveedor, y filtra por fecha.</li>
+      <li><strong>Exportar CSV</strong> descarga toda la tabla activa.</li>
+      <li><strong>Excel maestro (recibidas)</strong> genera un Excel con las OCs ya completadas y archivadas — esas ya no aparecen en esta tabla.</li>
+      <li>Da clic en el número de OC para ver el detalle completo, incluyendo las partidas.</li>
+      <li>✏️ y 🗑️ permiten editar o eliminar (requieren contraseña de Compras; eliminar pide motivo obligatorio).</li>
+    </ul>
+    <p style="color:#64748b">Acceso libre — solo editar/eliminar requiere contraseña.</p>`,
+  log:`
+    <p><strong>Objetivo:</strong> bitácora de auditoría de todos los eventos: altas, ediciones, eliminaciones y comentarios de Recibo.</p>
+    <ul style="padding-left:18px;margin:10px 0">
+      <li>Filtra por fecha, por número de OC o por tipo de evento.</li>
+      <li>La columna <strong>Motivo</strong> muestra la razón de eliminación o los comentarios capturados en Recibo.</li>
+      <li>Usa "Limpiar filtros" para volver a ver todo el historial de eventos.</li>
+    </ul>
+    <p style="color:#64748b">Acceso libre — no requiere usuario ni contraseña.</p>`
+};
+function mostrarAyuda(seccion){
+  document.getElementById('help-titulo').textContent=AYUDA_TITULOS[seccion]||'❓ Ayuda';
+  document.getElementById('help-contenido').innerHTML=AYUDA_CONTENIDO[seccion]||'<p>Sin contenido de ayuda para esta sección.</p>';
+  document.getElementById('help-modal').style.display='flex';
 }
 
 // ══════════════════════════════
@@ -1455,7 +1547,7 @@ function exportarExcelMaestro(){
 function exportarCSV(){
   if(!records.length){alert('Sin datos.');return;}
   const cols=['OC','Proveedor','Descripcion','Articulo','Fecha','Planta','Unidad','Sem','Mes','Hora','Cant.Llegar','Tarimas','Reporte','Entrada','Salida','Inicio','Fin','Conf','Comentarios','Estado'];
-  const rows=records.map(r=>[r.oc,r.prov,r.desc,r.art,r.fecha,r.planta,r.unidad,r.semana,r.mes,r.hora,r.kg_llegar,r.tar_manual,r.reporte,r.entrada,r.salida,r.arranque,r.fin,r.confirmacion,r.comentarios,r.estado].map(v=>'"'+(v||'').replace(/"/g,'""')+'"').join(','));
+  const rows=records.map(r=>[r.oc,r.prov,r.desc,r.art,r.fecha,r.planta,r.unidad,r.semana,r.mes,r.hora,r.kg_llegar,r.tar_manual,r.reporte,r.entrada,r.salida,r.arranque,r.fin,r.confirmacion,r.comentarios,r.estado].map(v=>'"'+String(v==null?'':v).replace(/"/g,'""')+'"').join(','));
   const csv=[cols.join(','),...rows].join('\n');
   const a=document.createElement('a');
   a.href='data:text/csv;charset=utf-8,\uFEFF'+encodeURIComponent(csv);
