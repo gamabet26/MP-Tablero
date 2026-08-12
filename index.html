@@ -20,9 +20,11 @@ const fbApp = initializeApp({
 const db = getFirestore(fbApp);
 const RECORDS_COL = collection(db, "zubex_rmp_records");
 const LOGS_COL    = collection(db, "zubex_rmp_logs");
+const COMPLETADAS_COL = collection(db, "zubex_rmp_completadas");
 window.fbSave = async (rec) => { await setDoc(doc(RECORDS_COL, rec.oc), rec, {merge:true}); };
 window.fbDelete = async (oc) => { await deleteDoc(doc(RECORDS_COL, oc)); };
 window.fbSaveLog = async (entry) => { await setDoc(doc(LOGS_COL, entry.id), entry); };
+window.fbSaveCompletada = async (rec) => { await setDoc(doc(COMPLETADAS_COL, rec.oc), rec, {merge:true}); };
 onSnapshot(RECORDS_COL, snap => {
   window._records = [];
   snap.forEach(d => window._records.push(d.data()));
@@ -33,6 +35,11 @@ onSnapshot(LOGS_COL, snap => {
   snap.forEach(d => window._logs.push(d.data()));
   window._logs.sort((a,b)=>b.ts.localeCompare(a.ts));
   window.dispatchEvent(new Event('logsUpdated'));
+});
+onSnapshot(COMPLETADAS_COL, snap => {
+  window._completadas = [];
+  snap.forEach(d => window._completadas.push(d.data()));
+  window.dispatchEvent(new Event('completadasUpdated'));
 });
 window._fbReady = true;
 window.dispatchEvent(new Event('firebaseReady'));
@@ -132,6 +139,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .pill{display:inline-block;padding:4px 12px;border-radius:99px;font-size:12px;font-weight:700}
 .p-d{background:#dcfce7;color:#15803d}.p-f{background:#fee2e2;color:#b91c1c}
 .p-r{background:#dbeafe;color:#1d4ed8}.p-p{background:#fef9c3;color:#a16207}
+.p-rep{background:#ede9fe;color:#6d28d9}
 .modal-overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);z-index:1000;align-items:center;justify-content:center}
 .modal-box{background:#fff;border-radius:14px;padding:24px 28px;box-shadow:0 20px 60px rgba(0,0,0,.3)}
 .btn-accion{padding:6px 12px;border-radius:6px;cursor:pointer;font-size:12px;font-family:inherit;font-weight:600;border:1px solid}
@@ -146,6 +154,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .oc-link{color:#1d4ed8;font-weight:700;cursor:pointer;text-decoration:underline;text-decoration-style:dotted}
 .oc-link:hover{color:#1e40af}
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
 
@@ -258,6 +267,23 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
       <div class="fl"><label>Tarimas estimadas</label><input type="number" id="edit-tarimas" min="0" placeholder="Ej. 12"></div>
     </div>
     <button onclick="confirmarEdicion()" class="btn-save"><i class="ti ti-device-floppy"></i> Guardar cambios</button>
+  </div>
+</div>
+
+<!-- DELETE REASON MODAL -->
+<div id="delete-reason-modal" class="modal-overlay">
+  <div class="modal-box" style="width:360px">
+    <h3 style="font-size:15px;font-weight:700;color:#1e293b;margin-bottom:4px">🗑️ Eliminar OC <span id="del-oc-num"></span></h3>
+    <p style="font-size:12px;color:#64748b;margin-bottom:12px">Indica el motivo de la eliminación (obligatorio, quedará en el Log).</p>
+    <div class="fl" style="margin-bottom:10px">
+      <label>Motivo</label>
+      <textarea id="del-motivo" rows="3" placeholder="Ej. OC duplicada, cancelada por proveedor, error de captura..." style="width:100%;padding:8px 10px;border:1px solid #cbd5e1;border-radius:8px;font-size:13px;font-family:inherit;outline:none;resize:vertical"></textarea>
+    </div>
+    <div id="del-motivo-error" style="display:none;background:#fee2e2;color:#b91c1c;border-radius:6px;padding:6px 10px;font-size:12px;margin-bottom:10px;text-align:center">Escribe el motivo antes de continuar</div>
+    <div style="display:flex;gap:8px">
+      <button onclick="confirmarEliminacionConMotivo()" class="btn-save" style="margin:0;background:#dc2626">Eliminar</button>
+      <button onclick="document.getElementById('delete-reason-modal').style.display='none'" style="flex:1;padding:9px;background:#f1f5f9;color:#475569;border:none;border-radius:8px;font-size:13px;cursor:pointer;font-family:inherit">Cancelar</button>
+    </div>
   </div>
 </div>
 
@@ -475,20 +501,21 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
       <input type="text" id="h-buscar" placeholder="Buscar OC o proveedor..." oninput="renderLog()" style="font-size:12px;padding:5px 8px;border:1px solid #cbd5e1;border-radius:8px;background:#fff;color:#1e293b;width:200px">
     </div>
     <button onclick="exportarCSV()" style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:8px;border:1px solid #cbd5e1;background:#fff;color:#1e293b;cursor:pointer;font-size:12px;font-family:inherit"><i class="ti ti-download"></i> Exportar CSV</button>
+    <button onclick="exportarExcelMaestro()" style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:8px;border:1px solid #16a34a;background:#f0fdf4;color:#15803d;cursor:pointer;font-size:12px;font-family:inherit;font-weight:600"><i class="ti ti-file-spreadsheet"></i> Excel maestro (recibidas)</button>
   </div>
   <div style="background:#fff;border-radius:12px;border:1px solid #e2e8f0;overflow:hidden">
     <table class="tbl" style="table-layout:fixed;width:100%">
       <colgroup>
-        <col style="width:6%"><col style="width:8%"><col style="width:13%">
+        <col style="width:6%"><col style="width:8%"><col style="width:14%">
         <col style="width:6%"><col style="width:6%"><col style="width:6%"><col style="width:6%">
         <col style="width:6%"><col style="width:6%"><col style="width:6%">
-        <col style="width:8%"><col style="width:5%"><col style="width:5%"><col style="width:7%"><col style="width:11%">
+        <col style="width:8%"><col style="width:5%"><col style="width:7%"><col style="width:12%">
       </colgroup>
       <thead><tr>
         <th>OC #</th><th>FECHA</th><th>PROVEEDOR</th>
         <th>PLANTA</th><th>UNIDAD</th><th>REPORTE</th><th>ENTRADA</th><th>SALIDA</th>
         <th>INICIO</th><th>FIN</th><th>⏱ DESCARGA</th>
-        <th>T.</th><th>CONF.</th><th>ESTADO</th><th>ACCIONES</th>
+        <th>T.</th><th>ESTADO</th><th>ACCIONES</th>
       </tr></thead>
       <tbody id="log-body"></tbody>
     </table>
@@ -503,17 +530,19 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
       <div style="font-size:12px;color:#64748b;margin-top:2px">Registro de entradas y cambios realizados por Compras</div>
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <input type="date" id="log-filter-fecha" onchange="renderLogMod()" style="font-size:12px;padding:6px 10px;border:1px solid #cbd5e1;border-radius:8px;background:#fff;color:#1e293b">
       <input type="text" id="log-filter-oc" placeholder="Filtrar por OC..." oninput="renderLogMod()" style="font-size:12px;padding:6px 10px;border:1px solid #cbd5e1;border-radius:8px;background:#fff;color:#1e293b;width:160px">
       <select id="log-filter-tipo" onchange="renderLogMod()" style="font-size:12px;padding:6px 10px;border:1px solid #cbd5e1;border-radius:8px;background:#fff;color:#1e293b">
         <option value="">Todos</option><option value="nueva">Nueva OC</option><option value="edicion">Edición</option><option value="eliminacion">Eliminación</option>
       </select>
+      <button onclick="document.getElementById('log-filter-fecha').value='';document.getElementById('log-filter-oc').value='';document.getElementById('log-filter-tipo').value='';renderLogMod()" style="font-size:12px;padding:6px 10px;border:1px solid #cbd5e1;border-radius:8px;background:#f8fafc;color:#475569;cursor:pointer;font-family:inherit">Limpiar filtros</button>
     </div>
   </div>
   <div style="background:#fff;border-radius:12px;border:1px solid #e2e8f0;overflow:hidden">
     <table class="tbl">
       <thead><tr>
         <th style="width:140px">FECHA Y HORA</th><th style="width:120px">EVENTO</th>
-        <th style="width:80px">OC #</th><th style="width:180px">PROVEEDOR</th><th>DETALLE</th>
+        <th style="width:80px">OC #</th><th style="width:160px">PROVEEDOR</th><th>DETALLE</th><th style="width:160px">MOTIVO</th>
       </tr></thead>
       <tbody id="log-mod-body"></tbody>
     </table>
@@ -529,10 +558,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 let TABLERO=[];
 let records=[];
 let logMods=[];
+let completadas=[];
 const LS_KEY='zubex_rmp_bk';
 const LS_LOG='zubex_log_bk';
+const LS_COMPLETADAS='zubex_rmp_completadas_bk';
 try{records=JSON.parse(localStorage.getItem(LS_KEY)||'[]')}catch(e){}
 try{logMods=JSON.parse(localStorage.getItem(LS_LOG)||'[]')}catch(e){}
+try{completadas=JSON.parse(localStorage.getItem(LS_COMPLETADAS)||'[]')}catch(e){}
 
 window.addEventListener('recordsUpdated',()=>{
   records=(window._records||[]);
@@ -544,6 +576,10 @@ window.addEventListener('logsUpdated',()=>{
   logMods=window._logs||[];
   try{localStorage.setItem(LS_LOG,JSON.stringify(logMods))}catch(e){}
   if(document.getElementById('panel-log').classList.contains('active')) renderLogMod();
+});
+window.addEventListener('completadasUpdated',()=>{
+  completadas=window._completadas||[];
+  try{localStorage.setItem(LS_COMPLETADAS,JSON.stringify(completadas))}catch(e){}
 });
 
 async function saveDB(rec){
@@ -557,14 +593,23 @@ async function deleteDB(oc){
   try{localStorage.setItem(LS_KEY,JSON.stringify(records))}catch(e){}
   if(window.fbDelete)try{await window.fbDelete(oc)}catch(e){console.warn(e);}
 }
+async function guardarComoCompletada(rec){
+  // Archiva la OC en zubex_rmp_completadas (fuente del Excel maestro) y la
+  // quita de records activo — así deja de aparecer en Historial/Calendario.
+  completadas=completadas.filter(r=>r.oc!==rec.oc);
+  completadas.push(rec);
+  try{localStorage.setItem(LS_COMPLETADAS,JSON.stringify(completadas))}catch(e){}
+  if(window.fbSaveCompletada)try{await window.fbSaveCompletada(rec)}catch(e){console.warn(e);}
+  await deleteDB(rec.oc);
+}
 async function saveLogEntry(entry){
   logMods.unshift(entry);
   try{localStorage.setItem(LS_LOG,JSON.stringify(logMods))}catch(e){}
   if(window.fbSaveLog)try{await window.fbSaveLog(entry)}catch(e){console.warn(e);}
 }
-function addLog(tipo,oc,prov,detalle){
+function addLog(tipo,oc,prov,detalle,motivo){
   const now=new Date();
-  saveLogEntry({id:now.getTime()+'_'+oc,ts:now.toISOString(),fecha:now.toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'numeric'}),hora:now.toTimeString().slice(0,5),tipo,oc,prov,detalle});
+  saveLogEntry({id:now.getTime()+'_'+oc,ts:now.toISOString(),fecha:now.toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'numeric'}),hora:now.toTimeString().slice(0,5),tipo,oc,prov,detalle,motivo:motivo||''});
 }
 
 // ══════════════════════════════
@@ -788,13 +833,19 @@ function buscarOC(val,ctx){
     // (visibles en Historial/Calendario) — nunca dependen del CSV en memoria.
     const byOCr=records.filter(r=>r.oc.includes(val));
     const byProvr=records.filter(r=>(r.prov||'').toLowerCase().includes(val.toLowerCase()));
-    const allR=[...new Map([...byOCr,...byProvr].map(r=>[r.oc,r])).values()].slice(0,20);
+    let allR=[...new Map([...byOCr,...byProvr].map(r=>[r.oc,r])).values()];
+    // Se ordena por fecha de llegada para que, si un proveedor tiene varias
+    // visitas en la semana, sea fácil identificar cuál OC corresponde.
+    allR.sort((a,b)=>(a.fecha||'').localeCompare(b.fecha||''));
+    allR=allR.slice(0,20);
     if(!allR.length){sg.style.display='none';return;}
     sg.innerHTML=allR.map(r=>{
       const tipo=getTipo(r.art,r.desc);
+      const fechaFmt=r.fecha?new Date(r.fecha+'T00:00:00').toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'numeric'}):'sin fecha';
       return`<div class="oc-item" onclick="selectOC('${r.oc}','${ctx}')">
         <span style="font-weight:600;color:#1d4ed8;font-size:12px">OC ${r.oc}</span>
         <span class="tipo-tag ${tipo.cls}">${tipo.label}</span>
+        <span style="font-size:10px;background:#fef3c7;color:#92400e;padding:1px 7px;border-radius:4px;font-weight:700;margin-left:4px">📅 ${fechaFmt}</span>
         <div style="color:#1e293b;font-size:12px;margin-top:2px;font-weight:500">${r.prov||'—'}</div>
         <div style="color:#64748b;font-size:11px">${(r.desc||'').substring(0,60)}${(r.desc||'').length>60?'...':''}</div>
       </div>`;
@@ -1001,6 +1052,13 @@ async function guardarCompra(){
     rec.desc=lineasOC[0].desc;
     rec.art=lineasOC[0].art;
   }
+  // Guarda las partidas del CSV dentro del registro (Firestore) para poder
+  // consultarlas después en Historial sin necesidad de volver a cargar el archivo.
+  if(lineasOC.length){
+    rec.partidas=lineasOC.map(l=>({art:l.art||'',desc:l.desc||'',qty:l.qty||'',cod:l.cod||'',prov:l.prov||''}));
+  } else if(existing.partidas){
+    rec.partidas=existing.partidas;
+  }
   await saveDB(rec);
   addLog(esNueva?'nueva':'edicion',oc,rec.prov,
     esNueva?`Nueva OC. Prov: ${rec.prov} | Prod: ${rec.desc} | Fecha: ${rec.fecha} | Planta: ${rec.planta} | Tarimas: ${tarManual||'no especificado'}`
@@ -1045,7 +1103,10 @@ async function guardarVigilancia(){
   rec.reporte=stamps['reporte']||rec.reporte;
   rec.entrada=stamps['entrada']||rec.entrada;
   rec.salida=stamps['salida']||rec.salida;
-  rec.estado=rec.salida?'fuera':'dentro';
+  if(rec.salida)rec.estado='fuera';
+  else if(rec.entrada)rec.estado='dentro';
+  else if(rec.reporte)rec.estado='reporte';
+  else rec.estado='pendiente';
   await saveDB(rec);
   addLog('edicion',oc,rec.prov,`Vigilancia: reporte ${rec.reporte||'—'} | entrada ${rec.entrada||'—'} | salida ${rec.salida||'—'}`);
   alert('✅ Acceso registrado para OC '+oc);
@@ -1079,8 +1140,19 @@ async function guardarRecibo(){
   rec.confirmacion=document.getElementById('q-conf').value;
   rec.comentarios=document.getElementById('r-coments').value;
   rec.estado='recibido';
+  addLog('edicion',oc,rec.prov,`Recibo: arranque ${rec.arranque||'—'} | fin ${rec.fin||'—'} | confirmación ${rec.confirmacion||'—'}`,rec.comentarios||'');
+
+  // Se considera "completa" cuando ya tiene inicio y fin de descarga y
+  // confirmación de entrega. En ese caso se archiva en el Excel maestro
+  // (colección zubex_rmp_completadas) y se quita de Historial/Calendario.
+  const completo=!!(rec.arranque&&rec.fin&&rec.confirmacion);
+  if(completo){
+    await guardarComoCompletada(rec);
+    limpiarFormularioRecibo();
+    alert('✅ OC '+oc+' completada. Se movió al Excel maestro de recepciones y ya no aparecerá en Historial.');
+    return;
+  }
   await saveDB(rec);
-  addLog('edicion',oc,rec.prov,`Recibo: arranque ${rec.arranque||'—'} | fin ${rec.fin||'—'} | confirmación ${rec.confirmacion||'—'}`);
   if(!prevArr&&rec.arranque){limpiarFormularioRecibo();switchTab('historial');}
   else{alert('✅ Recibo confirmado para OC '+oc);limpiarFormularioRecibo();}
 }
@@ -1157,9 +1229,20 @@ async function confirmarEdicion(){
 }
 async function ejecutarEliminacion(oc){
   const rec=records.find(r=>r.oc===oc);if(!rec)return;
-  if(!confirm(`¿Confirmas eliminar OC ${oc} — ${rec.prov}?`))return;
-  addLog('eliminacion',oc,rec.prov,`Eliminada. Prov: ${rec.prov} | Prod: ${rec.desc} | Fecha: ${rec.fecha}`);
+  document.getElementById('del-oc-num').textContent=oc+' — '+rec.prov;
+  document.getElementById('del-motivo').value='';
+  document.getElementById('del-motivo-error').style.display='none';
+  document.getElementById('delete-reason-modal').style.display='flex';
+  setTimeout(()=>document.getElementById('del-motivo').focus(),100);
+}
+async function confirmarEliminacionConMotivo(){
+  const oc=document.getElementById('del-oc-num').textContent.split(' — ')[0];
+  const motivo=document.getElementById('del-motivo').value.trim();
+  if(!motivo){document.getElementById('del-motivo-error').style.display='block';return;}
+  const rec=records.find(r=>r.oc===oc);if(!rec)return;
+  addLog('eliminacion',oc,rec.prov,`Eliminada. Prod: ${rec.desc} | Fecha: ${rec.fecha}`,motivo);
   await deleteDB(oc);
+  document.getElementById('delete-reason-modal').style.display='none';
   renderLog();
   alert('🗑️ OC '+oc+' eliminada.');
 }
@@ -1169,11 +1252,18 @@ async function ejecutarEliminacion(oc){
 // ══════════════════════════════
 function mostrarDetalleOC(oc){
   const rec=records.find(r=>r.oc===oc);
-  const lines=TABLERO.filter(r=>r.oc===oc);
+  let lines=TABLERO.filter(r=>r.oc===oc);
+  let desdeGuardado=false;
+  if(!lines.length&&rec&&rec.partidas&&rec.partidas.length){
+    // El CSV no está cargado en esta sesión: se usan las partidas
+    // que ya se guardaron en Firestore al registrar la OC en Compras.
+    lines=rec.partidas;
+    desdeGuardado=true;
+  }
   // proveedor real: del TABLERO si está cargado, sino del registro
   const provMostrar=lines.length?lines[0].prov:(rec?rec.prov:'');
   document.getElementById('oc-detail-title').textContent=`OC ${oc} — ${provMostrar}`;
-  const pm={pendiente:'p-p',dentro:'p-d',fuera:'p-f',recibido:'p-r'};
+  const pm={pendiente:'p-p',reporte:'p-rep',dentro:'p-d',fuera:'p-f',recibido:'p-r'};
   let html='';
   // info general
   if(rec){
@@ -1186,9 +1276,9 @@ function mostrarDetalleOC(oc){
       <div><div style="font-size:10px;color:#94a3b8;font-weight:600;text-transform:uppercase">Estado</div><div><span class="pill ${pm[rec.estado]||'p-p'}">${rec.estado||'pendiente'}</span></div></div>
     </div>`;
   }
-  // partidas del TABLERO
+  // partidas del TABLERO o de lo guardado en Firestore
   if(lines.length){
-    html+=`<div style="font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Partidas (${lines.length})</div>`;
+    html+=`<div style="font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Partidas (${lines.length})${desdeGuardado?' <span style="color:#94a3b8;font-weight:400;text-transform:none;letter-spacing:0">— guardadas, CSV no cargado en esta sesión</span>':''}</div>`;
     html+=lines.map((l,i)=>{
       const tipo=getTipo(l.art,l.desc);
       return`<div style="border:1px solid #e2e8f0;border-radius:8px;padding:10px 12px;margin-bottom:6px;background:#fafafa">
@@ -1232,8 +1322,8 @@ function renderLog(){
     else{const[mo,dy,yr]=r.fecha.split('/');d=new Date(yr,mo-1,dy);}
     return isNaN(d)||d<=limite;
   });
-  if(!filtered.length){tbody.innerHTML='<tr><td colspan="16" style="text-align:center;color:#94a3b8;padding:24px;font-size:13px">Sin registros para las próximas 3 semanas.</td></tr>';return;}
-  const pm={pendiente:'p-p',dentro:'p-d',fuera:'p-f',recibido:'p-r'};
+  if(!filtered.length){tbody.innerHTML='<tr><td colspan="14" style="text-align:center;color:#94a3b8;padding:24px;font-size:13px">Sin registros para las próximas 3 semanas.</td></tr>';return;}
+  const pm={pendiente:'p-p',reporte:'p-rep',dentro:'p-d',fuera:'p-f',recibido:'p-r'};
   tbody.innerHTML=filtered.map((r,ri)=>{
     let tiempoCell='—';
     if(r.arranque&&!r.fin){
@@ -1259,7 +1349,6 @@ function renderLog(){
       <td style="padding:12px 10px;white-space:nowrap">${r.fin||'—'}</td>
       <td style="padding:12px 10px">${tiempoCell}</td>
       <td style="padding:12px 10px">${tarCell}</td>
-      <td style="padding:12px 10px;font-weight:600">${r.confirmacion||'—'}</td>
       <td style="padding:12px 10px"><span class="pill ${pm[r.estado]||'p-p'}">${r.estado||'pendiente'}</span></td>
       <td style="padding:12px 10px;white-space:nowrap">
         <button class="btn-accion btn-edit" onclick="pedirPassAccion('edit','${r.oc}')">✏️</button>
@@ -1283,15 +1372,17 @@ function renderLog(){
 // LOG MOD
 // ══════════════════════════════
 function renderLogMod(){
+  const filtFecha=document.getElementById('log-filter-fecha').value||'';
   const filtOC=(document.getElementById('log-filter-oc').value||'').toLowerCase();
   const filtTipo=document.getElementById('log-filter-tipo').value||'';
   const tbody=document.getElementById('log-mod-body');
   const filtered=logMods.filter(l=>{
+    if(filtFecha&&(l.ts||'').slice(0,10)!==filtFecha)return false;
     if(filtOC&&!l.oc.toLowerCase().includes(filtOC))return false;
     if(filtTipo&&l.tipo!==filtTipo)return false;
     return true;
   });
-  if(!filtered.length){tbody.innerHTML='<tr><td colspan="5" style="text-align:center;color:#94a3b8;padding:24px;font-size:13px">Sin registros.</td></tr>';return;}
+  if(!filtered.length){tbody.innerHTML='<tr><td colspan="6" style="text-align:center;color:#94a3b8;padding:24px;font-size:13px">Sin registros.</td></tr>';return;}
   const colMap={nueva:['#dcfce7','#15803d','📥 Nueva OC'],edicion:['#dbeafe','#1d4ed8','✏️ Edición'],eliminacion:['#fee2e2','#b91c1c','🗑️ Eliminación']};
   tbody.innerHTML=filtered.map((l,i)=>{
     const[bg,tc,lbl]=colMap[l.tipo]||['#f1f5f9','#475569','📋 Evento'];
@@ -1301,8 +1392,45 @@ function renderLogMod(){
       <td style="padding:12px 14px;font-size:14px;font-weight:700;color:#1d4ed8">${l.oc}</td>
       <td style="padding:12px 14px;font-size:13px;color:#475569;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${l.prov||'—'}</td>
       <td style="padding:12px 14px;font-size:12px;color:#64748b">${l.detalle}</td>
+      <td style="padding:12px 14px;font-size:12px;color:#1e293b;font-style:${l.motivo?'normal':'italic'}">${l.motivo||'—'}</td>
     </tr>`;
   }).join('');
+}
+
+// ══════════════════════════════
+// EXCEL MAESTRO (recepciones completas)
+// ══════════════════════════════
+function exportarExcelMaestro(){
+  if(typeof XLSX==='undefined'){alert('No se pudo cargar la librería de Excel. Revisa tu conexión a internet.');return;}
+  // Se lee de la colección "completadas" — cada OC llega aquí automáticamente
+  // en cuanto Recibo la marca con toda la info (arranque+fin+confirmación),
+  // y en ese momento ya se quitó de Historial/Calendario.
+  const completas=[...completadas];
+  if(!completas.length){alert('Aún no hay recepciones completas archivadas.');return;}
+  completas.sort((a,b)=>(a.fecha||'').localeCompare(b.fecha||''));
+  const filas=completas.map(r=>{
+    let tiempoDescarga='';
+    if(r.arranque&&r.fin){
+      const[ah,am]=r.arranque.split(':').map(Number),[fh,fm]=r.fin.split(':').map(Number);
+      tiempoDescarga=((fh*60+fm)-(ah*60+am))+' min';
+    }
+    return{
+      'OC':r.oc,'Proveedor':r.prov||'',
+      'Descripción':r.desc||'','Artículo':r.art||'',
+      'Fecha llegada':r.fecha||'','Planta':r.planta||'','Unidad':r.unidad||'',
+      'Semana':r.semana||'','Mes':r.mes||'',
+      'Cant. a llegar':r.kg_llegar||'','Tarimas':r.tar_manual||'',
+      'Hora reporte':r.reporte||'','Hora entrada':r.entrada||'','Hora salida':r.salida||'',
+      'Inicio descarga':r.arranque||'','Fin descarga':r.fin||'','Tiempo descarga':tiempoDescarga,
+      '¿Entrega confirmada?':r.confirmacion||'','Comentarios':r.comentarios||'',
+      'Estado':r.estado||''
+    };
+  });
+  const ws=XLSX.utils.json_to_sheet(filas);
+  ws['!cols']=[{wch:8},{wch:28},{wch:30},{wch:14},{wch:12},{wch:9},{wch:9},{wch:7},{wch:6},{wch:12},{wch:8},{wch:10},{wch:10},{wch:10},{wch:12},{wch:10},{wch:12},{wch:16},{wch:30},{wch:10}];
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,'Recepciones completas');
+  XLSX.writeFile(wb,'Tablero_MP_Recepciones_Completas.xlsx');
 }
 
 // ══════════════════════════════
@@ -1392,7 +1520,7 @@ function showDayModal(key,ocs,meses,tipoColor){
   const fecha=new Date(yr,mo-1,dy);
   const nombres=['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
   document.getElementById('cal-modal-title').textContent=`${nombres[fecha.getDay()]} ${parseInt(dy)} de ${meses[parseInt(mo)-1]} ${yr}`;
-  const pm={pendiente:'p-p',dentro:'p-d',fuera:'p-f',recibido:'p-r'};
+  const pm={pendiente:'p-p',reporte:'p-rep',dentro:'p-d',fuera:'p-f',recibido:'p-r'};
   document.getElementById('cal-modal-body').innerHTML=ocs.map(r=>{
     const tipo=getTipo(r.art,r.desc);
     return`<div style="border:1px solid #e2e8f0;border-radius:8px;padding:10px 12px;margin-bottom:8px">
