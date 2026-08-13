@@ -120,6 +120,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .btn-ts{display:flex;align-items:center;gap:8px;padding:9px 14px;border-radius:8px;border:1px solid #cbd5e1;background:#fff;color:#1e293b;cursor:pointer;font-size:12px;font-family:inherit;transition:all .15s;width:100%}
 .btn-ts:hover{background:#f8fafc}
 .btn-ts.stamped{border-color:#16a34a;background:#f0fdf4;color:#15803d}
+.btn-ts.stamped{cursor:not-allowed;opacity:.9}
 .btn-ts .tt{margin-left:auto;font-size:11px;color:#16a34a;font-weight:600}
 .btn-ts-clear{padding:4px 8px;background:#fee2e2;color:#b91c1c;border:1px solid #fecaca;border-radius:6px;cursor:pointer;font-size:11px;font-family:inherit;margin-top:4px;display:none;width:100%}
 .btn-save{width:100%;padding:10px;background:#1a3a8f;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;font-family:inherit;transition:background .2s;margin-top:6px}
@@ -288,6 +289,23 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
   </div>
 </div>
 
+<!-- QUITAR REGISTRO REASON MODAL -->
+<div id="quitar-reason-modal" class="modal-overlay">
+  <div class="modal-box" style="width:360px">
+    <h3 style="font-size:15px;font-weight:700;color:#1e293b;margin-bottom:4px">✕ Quitar registro</h3>
+    <p id="quitar-descripcion" style="font-size:12px;color:#64748b;margin-bottom:12px"></p>
+    <div class="fl" style="margin-bottom:10px">
+      <label>Motivo (obligatorio, quedará en el Log)</label>
+      <textarea id="quitar-motivo" rows="3" placeholder="Ej. hora capturada por error, se corrige..." style="width:100%;padding:8px 10px;border:1px solid #cbd5e1;border-radius:8px;font-size:13px;font-family:inherit;outline:none;resize:vertical"></textarea>
+    </div>
+    <div id="quitar-motivo-error" style="display:none;background:#fee2e2;color:#b91c1c;border-radius:6px;padding:6px 10px;font-size:12px;margin-bottom:10px;text-align:center">Escribe el motivo antes de continuar</div>
+    <div style="display:flex;gap:8px">
+      <button onclick="confirmarQuitarConMotivo()" class="btn-save" style="margin:0;background:#dc2626">Quitar registro</button>
+      <button onclick="document.getElementById('quitar-reason-modal').style.display='none'" style="flex:1;padding:9px;background:#f1f5f9;color:#475569;border:none;border-radius:8px;font-size:13px;cursor:pointer;font-family:inherit">Cancelar</button>
+    </div>
+  </div>
+</div>
+
 <!-- HELP MODAL -->
 <div id="help-modal" class="modal-overlay">
   <div class="modal-box" style="max-width:520px;width:95%;max-height:85vh;overflow-y:auto">
@@ -410,21 +428,21 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
     <div class="ts-grid">
       <div>
         <label style="font-size:11px;color:#64748b;display:block;margin-bottom:5px">📞 Proveedor se reporta</label>
-        <button class="btn-ts" id="btn-reporte" onclick="stampTime('reporte','btn-reporte','ts-reporte','clear-reporte')"><i class="ti ti-phone-incoming" style="font-size:16px"></i><span style="font-weight:500">Registrar reporte</span><span class="tt" id="ts-reporte"></span></button>
-        <button class="btn-ts-clear" id="clear-reporte" onclick="clearStamp('reporte','btn-reporte','ts-reporte','clear-reporte')">✕ Quitar registro</button>
+        <button class="btn-ts" id="btn-reporte" onclick="stampTime('reporte','btn-reporte','ts-reporte','clear-reporte','vig')"><i class="ti ti-phone-incoming" style="font-size:16px"></i><span style="font-weight:500">Registrar reporte</span><span class="tt" id="ts-reporte"></span></button>
+        <button class="btn-ts-clear" id="clear-reporte" onclick="pedirMotivoQuitar('reporte','btn-reporte','ts-reporte','clear-reporte','vig')">✕ Quitar registro</button>
       </div>
       <div></div>
     </div>
     <div class="ts-grid">
       <div>
         <label style="font-size:11px;color:#64748b;display:block;margin-bottom:5px">Hora de llegada confirmada</label>
-        <button class="btn-ts" id="btn-entrada" onclick="stampTime('entrada','btn-entrada','ts-entrada','clear-entrada')"><i class="ti ti-login" style="font-size:16px"></i><span style="font-weight:500">Registrar llegada</span><span class="tt" id="ts-entrada"></span></button>
-        <button class="btn-ts-clear" id="clear-entrada" onclick="clearStamp('entrada','btn-entrada','ts-entrada','clear-entrada')">✕ Quitar registro</button>
+        <button class="btn-ts" id="btn-entrada" onclick="stampTime('entrada','btn-entrada','ts-entrada','clear-entrada','vig')"><i class="ti ti-login" style="font-size:16px"></i><span style="font-weight:500">Registrar llegada</span><span class="tt" id="ts-entrada"></span></button>
+        <button class="btn-ts-clear" id="clear-entrada" onclick="pedirMotivoQuitar('entrada','btn-entrada','ts-entrada','clear-entrada','vig')">✕ Quitar registro</button>
       </div>
       <div>
         <label style="font-size:11px;color:#64748b;display:block;margin-bottom:5px">Hora de salida de planta</label>
-        <button class="btn-ts" id="btn-salida" onclick="stampTime('salida','btn-salida','ts-salida','clear-salida')"><i class="ti ti-logout" style="font-size:16px"></i><span style="font-weight:500">Registrar salida</span><span class="tt" id="ts-salida"></span></button>
-        <button class="btn-ts-clear" id="clear-salida" onclick="clearStamp('salida','btn-salida','ts-salida','clear-salida')">✕ Quitar registro</button>
+        <button class="btn-ts" id="btn-salida" onclick="stampTime('salida','btn-salida','ts-salida','clear-salida','vig')"><i class="ti ti-logout" style="font-size:16px"></i><span style="font-weight:500">Registrar salida</span><span class="tt" id="ts-salida"></span></button>
+        <button class="btn-ts-clear" id="clear-salida" onclick="pedirMotivoQuitar('salida','btn-salida','ts-salida','clear-salida','vig')">✕ Quitar registro</button>
       </div>
     </div>
   </div>
@@ -457,13 +475,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
   <div class="ts-grid">
     <div>
       <label style="font-size:11px;color:#64748b;display:block;margin-bottom:5px">Inicio de descarga</label>
-      <button class="btn-ts" id="btn-arranque" onclick="stampTime('arranque','btn-arranque','ts-arranque','clear-arranque')"><i class="ti ti-player-play" style="font-size:16px"></i><span style="font-weight:500">Registrar inicio</span><span class="tt" id="ts-arranque"></span></button>
-      <button class="btn-ts-clear" id="clear-arranque" onclick="clearStamp('arranque','btn-arranque','ts-arranque','clear-arranque')">✕ Quitar registro</button>
+      <button class="btn-ts" id="btn-arranque" onclick="stampTime('arranque','btn-arranque','ts-arranque','clear-arranque','recibo')"><i class="ti ti-player-play" style="font-size:16px"></i><span style="font-weight:500">Registrar inicio</span><span class="tt" id="ts-arranque"></span></button>
+      <button class="btn-ts-clear" id="clear-arranque" onclick="pedirMotivoQuitar('arranque','btn-arranque','ts-arranque','clear-arranque','recibo')">✕ Quitar registro</button>
     </div>
     <div>
       <label style="font-size:11px;color:#64748b;display:block;margin-bottom:5px">Fin de descarga</label>
-      <button class="btn-ts" id="btn-fin" onclick="stampTime('fin','btn-fin','ts-fin','clear-fin')"><i class="ti ti-player-stop" style="font-size:16px"></i><span style="font-weight:500">Registrar fin</span><span class="tt" id="ts-fin"></span></button>
-      <button class="btn-ts-clear" id="clear-fin" onclick="clearStamp('fin','btn-fin','ts-fin','clear-fin')">✕ Quitar registro</button>
+      <button class="btn-ts" id="btn-fin" onclick="stampTime('fin','btn-fin','ts-fin','clear-fin','recibo')"><i class="ti ti-player-stop" style="font-size:16px"></i><span style="font-weight:500">Registrar fin</span><span class="tt" id="ts-fin"></span></button>
+      <button class="btn-ts-clear" id="clear-fin" onclick="pedirMotivoQuitar('fin','btn-fin','ts-fin','clear-fin','recibo')">✕ Quitar registro</button>
     </div>
   </div>
   <div class="fl" style="margin-bottom:12px"><label>Comentarios adicionales</label><textarea id="r-coments" placeholder="Observaciones, incidencias, condición del producto..."></textarea></div>
@@ -800,13 +818,36 @@ function loginSubmit(){
 // STAMPS con deshacer
 // ══════════════════════════════
 const stamps={};
-function stampTime(id,btnId,tsId,clearId){
+function stampTime(id,btnId,tsId,clearId,ctx){
+  if(stamps[id]){
+    // Ya hay una hora registrada — no se sobrescribe directo. Hay que dar
+    // "Quitar registro" (con motivo) antes de poder capturar una nueva.
+    alert('Ya existe un registro para este campo. Da clic en "✕ Quitar registro" primero (te pedirá el motivo) para poder capturar uno nuevo.');
+    return;
+  }
   const t=new Date().toTimeString().slice(0,5);
   stamps[id]=t;
   const btn=document.getElementById(btnId);
   if(btn){btn.classList.add('stamped');const ic=btn.querySelector('i');if(ic)ic.className='ti ti-check';}
   const el=document.getElementById(tsId);if(el)el.textContent=t;
   const clr=document.getElementById(clearId);if(clr)clr.style.display='block';
+  // Persiste de inmediato en Firestore (igual que "Quitar registro"), para
+  // que no se quede solo en la pantalla en lo que alguien da "Confirmar".
+  if(ctx)guardarStampInmediato(id,t,ctx);
+}
+async function guardarStampInmediato(id,valor,ctx){
+  const visitaId=ctx==='vig'?document.getElementById('v-visita-id').value:document.getElementById('r-visita-id').value;
+  if(!visitaId)return; // Aún no se seleccionó una OC de la lista — se guardará al dar "Confirmar".
+  const rec=records.find(r=>(r.visitaId||r.oc)===visitaId);
+  if(!rec)return;
+  rec[id]=valor;
+  if(ctx==='vig'){
+    if(rec.salida)rec.estado='fuera';
+    else if(rec.entrada)rec.estado='dentro';
+    else if(rec.reporte)rec.estado='reporte';
+  }
+  await saveDB(rec);
+  if(document.getElementById('panel-historial').classList.contains('active'))renderLog();
 }
 function clearStamp(id,btnId,tsId,clearId){
   delete stamps[id];
@@ -822,6 +863,50 @@ function clearStamp(id,btnId,tsId,clearId){
   }
   const el=document.getElementById(tsId);if(el)el.textContent='';
   const clr=document.getElementById(clearId);if(clr)clr.style.display='none';
+}
+// Restaura visualmente un stamp que ya estaba guardado en Firestore al
+// seleccionar una OC (sin usar la hora actual, sino la hora ya guardada).
+function restaurarStampGuardado(id,btnId,tsId,clearId,valor){
+  stamps[id]=valor;
+  const btn=document.getElementById(btnId);
+  if(btn){btn.classList.add('stamped');const ic=btn.querySelector('i');if(ic)ic.className='ti ti-check';}
+  const el=document.getElementById(tsId);if(el)el.textContent=valor;
+  const clr=document.getElementById(clearId);if(clr)clr.style.display='block';
+}
+
+const FIELD_LABELS={reporte:'Hora de reporte',entrada:'Hora de entrada',salida:'Hora de salida',arranque:'Hora de inicio de descarga',fin:'Hora de fin de descarga'};
+let _pendingQuitar=null;
+function pedirMotivoQuitar(id,btnId,tsId,clearId,ctx){
+  _pendingQuitar={id,btnId,tsId,clearId,ctx};
+  const visitaId=ctx==='vig'?document.getElementById('v-visita-id').value:document.getElementById('r-visita-id').value;
+  const rec=records.find(r=>(r.visitaId||r.oc)===visitaId);
+  const yaGuardado=rec&&rec[id];
+  document.getElementById('quitar-descripcion').textContent=yaGuardado
+    ?`Esta hora ya está guardada en el sistema (${rec[id]}). Al quitarla se actualizará de inmediato y quedará registrada en el Log.`
+    :'Aún no se ha guardado, pero de igual forma indica el motivo para dejar constancia.';
+  document.getElementById('quitar-motivo').value='';
+  document.getElementById('quitar-motivo-error').style.display='none';
+  document.getElementById('quitar-reason-modal').style.display='flex';
+  setTimeout(()=>document.getElementById('quitar-motivo').focus(),100);
+}
+async function confirmarQuitarConMotivo(){
+  const motivo=document.getElementById('quitar-motivo').value.trim();
+  if(!motivo){document.getElementById('quitar-motivo-error').style.display='block';return;}
+  const{id,btnId,tsId,clearId,ctx}=_pendingQuitar;
+  const visitaId=ctx==='vig'?document.getElementById('v-visita-id').value:document.getElementById('r-visita-id').value;
+  const rec=records.find(r=>(r.visitaId||r.oc)===visitaId);
+  if(rec&&rec[id]){
+    // Ya estaba guardado en Firestore: se actualiza de inmediato, sin
+    // esperar al botón "Confirmar", para no dejar el dato en un estado ambiguo.
+    const valorAnterior=rec[id];
+    rec[id]='';
+    await saveDB(rec);
+    addLog('edicion',rec.oc,rec.prov,`Se quitó ${FIELD_LABELS[id]||id} (era ${valorAnterior})`,motivo);
+    renderLog();
+  }
+  clearStamp(id,btnId,tsId,clearId);
+  document.getElementById('quitar-reason-modal').style.display='none';
+  _pendingQuitar=null;
 }
 
 // ══════════════════════════════
@@ -995,6 +1080,14 @@ function selectOC(id,ctx){
       const esCedis=planta==='CEDIS';
       document.getElementById('vig-acceso-section').style.display=esCedis?'none':'block';
       document.getElementById('vig-cedis-note').style.display=esCedis?'flex':'none';
+      // Restaura el estado real de cada hora ya guardada (bloqueada) o
+      // la deja libre para capturar si aún no tiene valor.
+      [['reporte','btn-reporte','ts-reporte','clear-reporte'],
+       ['entrada','btn-entrada','ts-entrada','clear-entrada'],
+       ['salida','btn-salida','ts-salida','clear-salida']].forEach(([f,b,t,c])=>{
+        if(rec[f])restaurarStampGuardado(f,b,t,c,rec[f]);
+        else clearStamp(f,b,t,c);
+      });
     } else {
       document.getElementById('r-oc').value=rec.oc;
       document.getElementById('r-visita-id').value=resolvedId;
@@ -1016,6 +1109,15 @@ function selectOC(id,ctx){
       } else {
         box.style.display='none';emp.style.display='block';
       }
+      // Restaura inicio/fin de descarga ya guardados (bloqueados) o los
+      // deja libres para capturar si aún no tienen valor.
+      [['arranque','btn-arranque','ts-arranque','clear-arranque'],
+       ['fin','btn-fin','ts-fin','clear-fin']].forEach(([f,b,t,c])=>{
+        if(rec[f])restaurarStampGuardado(f,b,t,c,rec[f]);
+        else clearStamp(f,b,t,c);
+      });
+      document.getElementById('q-conf').value=rec.confirmacion||'';
+      document.getElementById('r-coments').value=rec.comentarios||'';
     }
     return;
   }
@@ -1491,6 +1593,22 @@ function renderLog(){
     return isNaN(d)||d<=limite;
   });
   if(!filtered.length){tbody.innerHTML='<tr><td colspan="14" style="text-align:center;color:#94a3b8;padding:24px;font-size:13px">Sin registros para las próximas 3 semanas.</td></tr>';return;}
+  // Orden ascendente por fecha de llegada (las OCs sin fecha van al final).
+  // Normaliza formatos mixtos (ISO "yyyy-mm-dd" y "mm/dd/yyyy") antes de comparar.
+  const fechaKey=(f)=>{
+    if(!f)return null;
+    if(f.includes('-'))return f;
+    const[mo,dy,yr]=f.split('/');
+    if(!yr)return f;
+    return `${yr}-${mo.padStart(2,'0')}-${dy.padStart(2,'0')}`;
+  };
+  filtered.sort((a,b)=>{
+    const ka=fechaKey(a.fecha),kb=fechaKey(b.fecha);
+    if(!ka&&!kb)return 0;
+    if(!ka)return 1;
+    if(!kb)return -1;
+    return ka.localeCompare(kb);
+  });
   const pm={pendiente:'p-p',reporte:'p-rep',dentro:'p-d',fuera:'p-f',recibido:'p-r'};
   tbody.innerHTML=filtered.map((r,ri)=>{
     const rid=r.visitaId||r.oc;
