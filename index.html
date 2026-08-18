@@ -469,7 +469,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
   <div id="r-tar-empty" style="background:#f8fafc;border:1px dashed #cbd5e1;border-radius:8px;padding:12px;margin-bottom:14px;font-size:12px;color:#94a3b8;text-align:center">Selecciona una OC para ver las tarimas</div>
 
   <div class="sec" style="margin-top:4px">Confirmación de entrega</div>
-  <div style="margin-bottom:14px"><div class="fl"><label>¿Entrega confirmada?</label><select id="q-conf" style="font-size:13px;padding:7px 10px;border:1px solid #cbd5e1;border-radius:8px;background:#fff;color:#1e293b;font-family:inherit;max-width:200px"><option value="">— Seleccionar —</option><option>SI</option><option>NO</option></select></div></div>
 
   <div class="sec">Tiempos de descarga</div>
   <div class="ts-grid">
@@ -637,8 +636,27 @@ async function guardarComoCompletada(rec){
   completadas=completadas.filter(r=>(r.visitaId||r.oc)!==id);
   completadas.push(rec);
   try{localStorage.setItem(LS_COMPLETADAS,JSON.stringify(completadas))}catch(e){}
-  if(window.fbSaveCompletada)try{await window.fbSaveCompletada(rec)}catch(e){console.warn(e);}
-  await deleteDB(id);
+  let archivadoOk=true;
+  if(window.fbSaveCompletada){
+    try{
+      await window.fbSaveCompletada(rec);
+    }catch(e){
+      archivadoOk=false;
+      console.warn('No se pudo archivar en zubex_rmp_completadas:',e);
+    }
+  }
+  if(archivadoOk){
+    await deleteDB(id);
+  } else {
+    // Importante: si el archivado falla (ej. reglas de Firestore no
+    // incluyen esta colección), NO se borra el registro activo — se
+    // revierte el archivado local para no dejar datos fantasma, y la OC
+    // permanece visible en Historial hasta que se resuelva el problema.
+    completadas=completadas.filter(r=>(r.visitaId||r.oc)!==id);
+    try{localStorage.setItem(LS_COMPLETADAS,JSON.stringify(completadas))}catch(e){}
+    alert('⚠ No se pudo archivar la OC '+rec.oc+' en el Excel maestro — probablemente falta permiso en las reglas de Firestore para la colección "zubex_rmp_completadas". La OC seguirá visible en Historial (no se perdió), corrígelo y vuelve a intentarlo.');
+  }
+  return archivadoOk;
 }
 async function saveLogEntry(entry){
   logMods.unshift(entry);
@@ -845,6 +863,17 @@ async function guardarStampInmediato(id,valor,ctx){
     if(rec.salida)rec.estado='fuera';
     else if(rec.entrada)rec.estado='dentro';
     else if(rec.reporte)rec.estado='reporte';
+  }
+  // El detonante para archivar en el Excel maestro (y salir de Historial/
+  // Calendario) es que Vigilancia registre la hora de salida.
+  if(ctx==='vig'&&id==='salida'&&rec.salida){
+    const ok=await guardarComoCompletada(rec);
+    if(ok){
+      limpiarFormularioVigilancia();
+      alert('✅ OC '+rec.oc+' completada (salida registrada). Se movió al Excel maestro de recepciones.');
+    }
+    if(document.getElementById('panel-historial').classList.contains('active'))renderLog();
+    return;
   }
   await saveDB(rec);
   if(document.getElementById('panel-historial').classList.contains('active'))renderLog();
@@ -1116,7 +1145,6 @@ function selectOC(id,ctx){
         if(rec[f])restaurarStampGuardado(f,b,t,c,rec[f]);
         else clearStamp(f,b,t,c);
       });
-      document.getElementById('q-conf').value=rec.confirmacion||'';
       document.getElementById('r-coments').value=rec.comentarios||'';
     }
     return;
@@ -1352,8 +1380,15 @@ async function guardarVigilancia(){
   else if(rec.entrada)rec.estado='dentro';
   else if(rec.reporte)rec.estado='reporte';
   else rec.estado='pendiente';
-  await saveDB(rec);
   addLog('edicion',oc,rec.prov,`Vigilancia: reporte ${rec.reporte||'—'} | entrada ${rec.entrada||'—'} | salida ${rec.salida||'—'}`);
+  if(rec.salida){
+    // La hora de salida es el detonante para archivar en el Excel maestro.
+    const ok=await guardarComoCompletada(rec);
+    limpiarFormularioVigilancia();
+    if(ok)alert('✅ OC '+oc+' completada (salida registrada). Se movió al Excel maestro de recepciones.');
+    return;
+  }
+  await saveDB(rec);
   alert('✅ Acceso registrado para OC '+oc+(rec.fecha?' ('+rec.fecha+')':''));
   limpiarFormularioVigilancia();
 }
@@ -1390,21 +1425,9 @@ async function guardarRecibo(){
   const prevArr=rec.arranque;
   rec.arranque=stamps['arranque']||rec.arranque;
   rec.fin=stamps['fin']||rec.fin;
-  rec.confirmacion=document.getElementById('q-conf').value;
   rec.comentarios=document.getElementById('r-coments').value;
-  rec.estado='recibido';
-  addLog('edicion',oc,rec.prov,`Recibo: arranque ${rec.arranque||'—'} | fin ${rec.fin||'—'} | confirmación ${rec.confirmacion||'—'}`,rec.comentarios||'');
-
-  // Se considera "completa" cuando ya tiene inicio y fin de descarga y
-  // confirmación de entrega. En ese caso se archiva en el Excel maestro
-  // (colección zubex_rmp_completadas) y se quita de Historial/Calendario.
-  const completo=!!(rec.arranque&&rec.fin&&rec.confirmacion);
-  if(completo){
-    await guardarComoCompletada(rec);
-    limpiarFormularioRecibo();
-    alert('✅ OC '+oc+' completada. Se movió al Excel maestro de recepciones y ya no aparecerá en Historial.');
-    return;
-  }
+  if(rec.arranque&&rec.fin)rec.estado='recibido';
+  addLog('edicion',oc,rec.prov,`Recibo: arranque ${rec.arranque||'—'} | fin ${rec.fin||'—'}`,rec.comentarios||'');
   await saveDB(rec);
   if(!prevArr&&rec.arranque){limpiarFormularioRecibo();switchTab('historial');}
   else{alert('✅ Recibo confirmado para OC '+oc);limpiarFormularioRecibo();}
@@ -1419,7 +1442,6 @@ function limpiarFormularioRecibo(){
   const tarBox=document.getElementById('r-tar-box');if(tarBox)tarBox.style.display='none';
   const tarEmpty=document.getElementById('r-tar-empty');if(tarEmpty)tarEmpty.style.display='';
   const tarContent=document.getElementById('r-tar-content');if(tarContent)tarContent.innerHTML='';
-  const qconf=document.getElementById('q-conf');if(qconf)qconf.value='';
   ['arranque','fin'].forEach(id=>{
     const map={arranque:['btn-arranque','ts-arranque','clear-arranque'],fin:['btn-fin','ts-fin','clear-fin']};
     clearStamp(id,...map[id]);
@@ -1709,7 +1731,7 @@ function exportarExcelMaestro(){
       'Cant. a llegar':r.kg_llegar||'','Tarimas':r.tar_manual||'',
       'Hora reporte':r.reporte||'','Hora entrada':r.entrada||'','Hora salida':r.salida||'',
       'Inicio descarga':r.arranque||'','Fin descarga':r.fin||'','Tiempo descarga':tiempoDescarga,
-      '¿Entrega confirmada?':r.confirmacion||'','Comentarios':r.comentarios||'',
+      'Comentarios':r.comentarios||'',
       'Estado':r.estado||''
     };
   });
@@ -1725,8 +1747,8 @@ function exportarExcelMaestro(){
 // ══════════════════════════════
 function exportarCSV(){
   if(!records.length){alert('Sin datos.');return;}
-  const cols=['OC','Proveedor','Descripcion','Articulo','Fecha','Planta','Unidad','Sem','Mes','Hora','Cant.Llegar','Tarimas','Reporte','Entrada','Salida','Inicio','Fin','Conf','Comentarios','Estado'];
-  const rows=records.map(r=>[r.oc,r.prov,r.desc,r.art,r.fecha,r.planta,r.unidad,r.semana,r.mes,r.hora,r.kg_llegar,r.tar_manual,r.reporte,r.entrada,r.salida,r.arranque,r.fin,r.confirmacion,r.comentarios,r.estado].map(v=>'"'+String(v==null?'':v).replace(/"/g,'""')+'"').join(','));
+  const cols=['OC','Proveedor','Descripcion','Articulo','Fecha','Planta','Unidad','Sem','Mes','Hora','Cant.Llegar','Tarimas','Reporte','Entrada','Salida','Inicio','Fin','Comentarios','Estado'];
+  const rows=records.map(r=>[r.oc,r.prov,r.desc,r.art,r.fecha,r.planta,r.unidad,r.semana,r.mes,r.hora,r.kg_llegar,r.tar_manual,r.reporte,r.entrada,r.salida,r.arranque,r.fin,r.comentarios,r.estado].map(v=>'"'+String(v==null?'':v).replace(/"/g,'""')+'"').join(','));
   const csv=[cols.join(','),...rows].join('\n');
   const a=document.createElement('a');
   a.href='data:text/csv;charset=utf-8,\uFEFF'+encodeURIComponent(csv);
