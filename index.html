@@ -864,17 +864,10 @@ async function guardarStampInmediato(id,valor,ctx){
     else if(rec.entrada)rec.estado='dentro';
     else if(rec.reporte)rec.estado='reporte';
   }
-  // El detonante para archivar en el Excel maestro (y salir de Historial/
-  // Calendario) es que Vigilancia registre la hora de salida.
-  if(ctx==='vig'&&id==='salida'&&rec.salida){
-    const ok=await guardarComoCompletada(rec);
-    if(ok){
-      limpiarFormularioVigilancia();
-      alert('✅ OC '+rec.oc+' completada (salida registrada). Se movió al Excel maestro de recepciones.');
-    }
-    if(document.getElementById('panel-historial').classList.contains('active'))renderLog();
-    return;
-  }
+  // Nota: el archivado al Excel maestro NO se dispara aquí, aunque ya se
+  // haya registrado la salida. Es intencional — el archivado solo ocurre
+  // con el clic explícito en "Confirmar registro", para que siempre haya
+  // un paso deliberado antes de que la OC se quite de Historial/Calendario.
   await saveDB(rec);
   if(document.getElementById('panel-historial').classList.contains('active'))renderLog();
 }
