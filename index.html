@@ -836,12 +836,30 @@ function loginSubmit(){
 // STAMPS con deshacer
 // ══════════════════════════════
 const stamps={};
+// Cadena de dependencias: cada paso requiere que el anterior ya esté
+// capturado. El campo previo vive en el mismo registro (rec) sin importar
+// si lo capturó Vigilancia o Recibo, porque es una sola OC compartida.
+const REQUISITOS_PREVIOS={
+  entrada:{campo:'reporte',label:'la hora de reporte'},
+  arranque:{campo:'entrada',label:'la hora de entrada'},
+  fin:{campo:'arranque',label:'el inicio de descarga'},
+  salida:{campo:'fin',label:'el fin de descarga'}
+};
 function stampTime(id,btnId,tsId,clearId,ctx){
   if(stamps[id]){
     // Ya hay una hora registrada — no se sobrescribe directo. Hay que dar
     // "Quitar registro" (con motivo) antes de poder capturar una nueva.
     alert('Ya existe un registro para este campo. Da clic en "✕ Quitar registro" primero (te pedirá el motivo) para poder capturar uno nuevo.');
     return;
+  }
+  const requisito=REQUISITOS_PREVIOS[id];
+  if(requisito){
+    const visitaId=ctx==='vig'?document.getElementById('v-visita-id').value:document.getElementById('r-visita-id').value;
+    const rec=records.find(r=>(r.visitaId||r.oc)===visitaId);
+    if(!rec||!rec[requisito.campo]){
+      alert('⚠ Aún no se puede registrar esto.\n\nPrimero debe capturarse '+requisito.label+' de esta OC.');
+      return;
+    }
   }
   const t=new Date().toTimeString().slice(0,5);
   stamps[id]=t;
@@ -1366,9 +1384,28 @@ async function guardarVigilancia(){
   }
   if(!existing){alert('OC no encontrada. Regístrala en Compras primero.');return;}
   const rec={...existing};
-  rec.reporte=stamps['reporte']||rec.reporte;
-  rec.entrada=stamps['entrada']||rec.entrada;
-  rec.salida=stamps['salida']||rec.salida;
+  const reporteNueva=stamps['reporte'];
+  if(reporteNueva)rec.reporte=reporteNueva;
+  const entradaNueva=stamps['entrada'];
+  if(entradaNueva&&!rec.entrada){
+    if(!rec.reporte){
+      alert('⚠ No se puede confirmar la entrada todavía.\n\nPrimero debe capturarse la hora de reporte de esta OC.');
+      clearStamp('entrada','btn-entrada','ts-entrada','clear-entrada');
+      return;
+    }
+    rec.entrada=entradaNueva;
+  }
+  const salidaNueva=stamps['salida'];
+  if(salidaNueva&&!rec.salida){
+    // Respaldo de la misma salvaguarda de stampTime: la cadena completa
+    // reporte -> entrada -> inicio -> fin -> salida debe estar cumplida.
+    if(!rec.fin){
+      alert('⚠ No se puede confirmar la salida todavía.\n\nFalta que Recibo capture el fin de descarga de esta OC.');
+      clearStamp('salida','btn-salida','ts-salida','clear-salida');
+      return;
+    }
+    rec.salida=salidaNueva;
+  }
   if(rec.salida)rec.estado='fuera';
   else if(rec.entrada)rec.estado='dentro';
   else if(rec.reporte)rec.estado='reporte';
@@ -1416,8 +1453,24 @@ async function guardarRecibo(){
   if(!existing){alert('OC no encontrada. Regístrala en Compras primero.');return;}
   const rec={...existing};
   const prevArr=rec.arranque;
-  rec.arranque=stamps['arranque']||rec.arranque;
-  rec.fin=stamps['fin']||rec.fin;
+  const arranqueNuevo=stamps['arranque'];
+  if(arranqueNuevo&&!rec.arranque){
+    if(!rec.entrada){
+      alert('⚠ No se puede confirmar el inicio de descarga todavía.\n\nFalta que Vigilancia registre la hora de entrada de esta OC.');
+      clearStamp('arranque','btn-arranque','ts-arranque','clear-arranque');
+      return;
+    }
+    rec.arranque=arranqueNuevo;
+  }
+  const finNuevo=stamps['fin'];
+  if(finNuevo&&!rec.fin){
+    if(!rec.arranque){
+      alert('⚠ No se puede confirmar el fin de descarga todavía.\n\nFalta capturar el inicio de descarga de esta OC.');
+      clearStamp('fin','btn-fin','ts-fin','clear-fin');
+      return;
+    }
+    rec.fin=finNuevo;
+  }
   rec.comentarios=document.getElementById('r-coments').value;
   if(rec.arranque&&rec.fin)rec.estado='recibido';
   addLog('edicion',oc,rec.prov,`Recibo: arranque ${rec.arranque||'—'} | fin ${rec.fin||'—'}`,rec.comentarios||'');
