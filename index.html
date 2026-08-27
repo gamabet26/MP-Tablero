@@ -854,8 +854,7 @@ function stampTime(id,btnId,tsId,clearId,ctx){
   }
   const requisito=REQUISITOS_PREVIOS[id];
   if(requisito){
-    const visitaId=ctx==='vig'?document.getElementById('v-visita-id').value:document.getElementById('r-visita-id').value;
-    const rec=records.find(r=>(r.visitaId||r.oc)===visitaId);
+    const rec=buscarRecActual(ctx);
     // Excepción CEDIS: ahí Vigilancia no controla accesos (reporte/entrada/
     // salida), así que Recibo puede iniciar directo con "inicio de descarga".
     const esExcepcionCedis=id==='arranque'&&rec&&rec.planta==='CEDIS';
@@ -875,10 +874,8 @@ function stampTime(id,btnId,tsId,clearId,ctx){
   if(ctx)guardarStampInmediato(id,t,ctx);
 }
 async function guardarStampInmediato(id,valor,ctx){
-  const visitaId=ctx==='vig'?document.getElementById('v-visita-id').value:document.getElementById('r-visita-id').value;
-  if(!visitaId)return; // Aún no se seleccionó una OC de la lista — se guardará al dar "Confirmar".
-  const rec=records.find(r=>(r.visitaId||r.oc)===visitaId);
-  if(!rec)return;
+  const rec=buscarRecActual(ctx);
+  if(!rec)return; // Ambiguo o no encontrado — se guardará al dar "Confirmar".
   rec[id]=valor;
   if(ctx==='vig'){
     if(rec.salida)rec.estado='fuera';
@@ -919,10 +916,23 @@ function restaurarStampGuardado(id,btnId,tsId,clearId,valor){
 
 const FIELD_LABELS={reporte:'Hora de reporte',entrada:'Hora de entrada',salida:'Hora de salida',arranque:'Hora de inicio de descarga',fin:'Hora de fin de descarga'};
 let _pendingQuitar=null;
+// Busca el registro de la OC actualmente cargada en Vigilancia o Recibo.
+// Primero por el identificador interno (visitaId, se llena al seleccionar
+// una sugerencia); si está vacío (se tecleó la OC directo sin seleccionar
+// de la lista), cae de respaldo a buscar por el número de OC escrito.
+function buscarRecActual(ctx){
+  const visitaId=ctx==='vig'?document.getElementById('v-visita-id').value:document.getElementById('r-visita-id').value;
+  if(visitaId){
+    const rec=records.find(r=>(r.visitaId||r.oc)===visitaId);
+    if(rec)return rec;
+  }
+  const ocTexto=(ctx==='vig'?document.getElementById('v-oc'):document.getElementById('r-oc')).value.trim();
+  const matches=records.filter(r=>r.oc===ocTexto);
+  return matches.length===1?matches[0]:null;
+}
 function pedirMotivoQuitar(id,btnId,tsId,clearId,ctx){
   _pendingQuitar={id,btnId,tsId,clearId,ctx};
-  const visitaId=ctx==='vig'?document.getElementById('v-visita-id').value:document.getElementById('r-visita-id').value;
-  const rec=records.find(r=>(r.visitaId||r.oc)===visitaId);
+  const rec=buscarRecActual(ctx);
   const yaGuardado=rec&&rec[id];
   document.getElementById('quitar-descripcion').textContent=yaGuardado
     ?`Esta hora ya está guardada en el sistema (${rec[id]}). Al quitarla se actualizará de inmediato y quedará registrada en el Log.`
@@ -936,8 +946,7 @@ async function confirmarQuitarConMotivo(){
   const motivo=document.getElementById('quitar-motivo').value.trim();
   if(!motivo){document.getElementById('quitar-motivo-error').style.display='block';return;}
   const{id,btnId,tsId,clearId,ctx}=_pendingQuitar;
-  const visitaId=ctx==='vig'?document.getElementById('v-visita-id').value:document.getElementById('r-visita-id').value;
-  const rec=records.find(r=>(r.visitaId||r.oc)===visitaId);
+  const rec=buscarRecActual(ctx);
   if(rec&&rec[id]){
     // Ya estaba guardado en Firestore: se actualiza de inmediato, sin
     // esperar al botón "Confirmar", para no dejar el dato en un estado ambiguo.
