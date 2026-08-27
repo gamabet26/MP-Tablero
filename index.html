@@ -856,7 +856,10 @@ function stampTime(id,btnId,tsId,clearId,ctx){
   if(requisito){
     const visitaId=ctx==='vig'?document.getElementById('v-visita-id').value:document.getElementById('r-visita-id').value;
     const rec=records.find(r=>(r.visitaId||r.oc)===visitaId);
-    if(!rec||!rec[requisito.campo]){
+    // Excepción CEDIS: ahí Vigilancia no controla accesos (reporte/entrada/
+    // salida), así que Recibo puede iniciar directo con "inicio de descarga".
+    const esExcepcionCedis=id==='arranque'&&rec&&rec.planta==='CEDIS';
+    if(!esExcepcionCedis&&(!rec||!rec[requisito.campo])){
       alert('⚠ Aún no se puede registrar esto.\n\nPrimero debe capturarse '+requisito.label+' de esta OC.');
       return;
     }
@@ -1453,9 +1456,12 @@ async function guardarRecibo(){
   if(!existing){alert('OC no encontrada. Regístrala en Compras primero.');return;}
   const rec={...existing};
   const prevArr=rec.arranque;
+  const esCedis=rec.planta==='CEDIS';
   const arranqueNuevo=stamps['arranque'];
   if(arranqueNuevo&&!rec.arranque){
-    if(!rec.entrada){
+    // Excepción CEDIS: ahí Vigilancia no controla accesos, así que Recibo
+    // puede iniciar directo sin depender de la hora de entrada.
+    if(!esCedis&&!rec.entrada){
       alert('⚠ No se puede confirmar el inicio de descarga todavía.\n\nFalta que Vigilancia registre la hora de entrada de esta OC.');
       clearStamp('arranque','btn-arranque','ts-arranque','clear-arranque');
       return;
@@ -1474,6 +1480,14 @@ async function guardarRecibo(){
   rec.comentarios=document.getElementById('r-coments').value;
   if(rec.arranque&&rec.fin)rec.estado='recibido';
   addLog('edicion',oc,rec.prov,`Recibo: arranque ${rec.arranque||'—'} | fin ${rec.fin||'—'}`,rec.comentarios||'');
+  if(esCedis&&rec.arranque&&rec.fin){
+    // Para CEDIS, el fin de descarga es el propio detonante del archivado
+    // (no depende de la salida de Vigilancia, que ahí no aplica).
+    const ok=await guardarComoCompletada(rec);
+    limpiarFormularioRecibo();
+    if(ok)alert('✅ OC '+oc+' completada (CEDIS: fin de descarga registrado). Se movió al Excel maestro de recepciones.');
+    return;
+  }
   await saveDB(rec);
   if(!prevArr&&rec.arranque){limpiarFormularioRecibo();switchTab('historial');}
   else{alert('✅ Recibo confirmado para OC '+oc);limpiarFormularioRecibo();}
