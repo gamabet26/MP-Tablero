@@ -268,6 +268,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
       <div class="fl"><label>Cantidad por llegar</label><input type="number" id="edit-kg" min="0"></div>
       <div class="fl"><label>Tarimas estimadas</label><input type="number" id="edit-tarimas" min="0" placeholder="Ej. 12"></div>
     </div>
+    <div class="fl" style="margin-top:4px">
+      <label>Motivo de la edición (obligatorio, quedará en el Log)</label>
+      <textarea id="edit-motivo" rows="2" placeholder="Ej. corrección de fecha por cambio del proveedor..." style="width:100%;padding:8px 10px;border:1px solid #cbd5e1;border-radius:8px;font-size:13px;font-family:inherit;outline:none;resize:vertical"></textarea>
+    </div>
+    <div id="edit-motivo-error" style="display:none;background:#fee2e2;color:#b91c1c;border-radius:6px;padding:6px 10px;font-size:12px;margin:8px 0;text-align:center">Escribe el motivo antes de continuar</div>
     <button onclick="confirmarEdicion()" class="btn-save"><i class="ti ti-device-floppy"></i> Guardar cambios</button>
   </div>
 </div>
@@ -540,13 +545,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
   <div style="background:#fff;border-radius:12px;border:1px solid #e2e8f0;overflow:hidden">
     <table class="tbl" style="table-layout:fixed;width:100%">
       <colgroup>
-        <col style="width:6%"><col style="width:8%"><col style="width:14%">
+        <col style="width:6%"><col style="width:7%"><col style="width:7%"><col style="width:12%">
         <col style="width:6%"><col style="width:6%"><col style="width:6%"><col style="width:6%">
         <col style="width:6%"><col style="width:6%"><col style="width:6%">
         <col style="width:8%"><col style="width:5%"><col style="width:7%"><col style="width:12%">
       </colgroup>
       <thead><tr>
-        <th>OC #</th><th>FECHA</th><th>PROVEEDOR</th>
+        <th>OC #</th><th>FECHA</th><th>FECHA MP</th><th>PROVEEDOR</th>
         <th>PLANTA</th><th>UNIDAD</th><th>REPORTE</th><th>ENTRADA</th><th>SALIDA</th>
         <th>INICIO</th><th>FIN</th><th>⏱ DESCARGA</th>
         <th>T.</th><th>ESTADO</th><th>ACCIONES</th>
@@ -881,6 +886,11 @@ async function guardarStampInmediato(id,valor,ctx){
     if(rec.salida)rec.estado='fuera';
     else if(rec.entrada)rec.estado='dentro';
     else if(rec.reporte)rec.estado='reporte';
+  }
+  if(ctx==='recibo'&&id==='arranque'&&!rec.fecha_mp){
+    // Fecha MP: se llena sola con la fecha del día en que Recibo inicia
+    // la descarga — es la fecha real de recepción física del material.
+    rec.fecha_mp=new Date().toISOString().slice(0,10);
   }
   // Nota: el archivado al Excel maestro NO se dispara aquí, aunque ya se
   // haya registrado la salida. Es intencional — el archivado solo ocurre
@@ -1476,6 +1486,11 @@ async function guardarRecibo(){
       return;
     }
     rec.arranque=arranqueNuevo;
+    if(!rec.fecha_mp){
+      // Fecha MP: se llena sola con la fecha del día en que Recibo inicia
+      // la descarga — es la fecha real de recepción física del material.
+      rec.fecha_mp=new Date().toISOString().slice(0,10);
+    }
   }
   const finNuevo=stamps['fin'];
   if(finNuevo&&!rec.fin){
@@ -1558,6 +1573,8 @@ function abrirEdicion(id){
   document.getElementById('edit-mes').value=rec.mes||'';
   document.getElementById('edit-kg').value=rec.kg_llegar||'';
   document.getElementById('edit-tarimas').value=rec.tar_manual||'';
+  document.getElementById('edit-motivo').value='';
+  document.getElementById('edit-motivo-error').style.display='none';
   document.getElementById('edit-modal').style.display='flex';
 }
 async function confirmarEdicion(){
@@ -1568,13 +1585,18 @@ async function confirmarEdicion(){
   const vals={prov:document.getElementById('edit-prov').value,desc:document.getElementById('edit-desc').value,fecha:document.getElementById('edit-fecha').value,hora:document.getElementById('edit-hora').value,planta:document.getElementById('edit-planta').value,unidad:document.getElementById('edit-unidad').value,semana:document.getElementById('edit-semana').value,mes:document.getElementById('edit-mes').value,kg_llegar:document.getElementById('edit-kg').value,tar_manual:document.getElementById('edit-tarimas').value};
   const cambios=[];
   Object.keys(vals).forEach(k=>{const a=String(_editSnapshot[k]||''),b=String(vals[k]||'');if(a!==b)cambios.push(`${campos[k]}: "${a}" → "${b}"`);});
+  const motivo=document.getElementById('edit-motivo').value.trim();
+  if(cambios.length&&!motivo){
+    document.getElementById('edit-motivo-error').style.display='block';
+    return;
+  }
   Object.assign(rec,vals);
   if(vals.tar_manual)rec.tar_manual=Number(vals.tar_manual);
   // Nota: aunque se edite la fecha, el visitaId (ID del documento) no cambia —
   // conserva su identidad original para no duplicar el registro en Firestore.
   await saveDB(rec);
   document.getElementById('edit-modal').style.display='none';
-  if(cambios.length)addLog('edicion',oc,rec.prov,cambios.join(' | '));
+  if(cambios.length)addLog('edicion',oc,rec.prov,cambios.join(' | '),motivo);
   renderLog();
   alert('✅ OC '+oc+' actualizada.');
 }
@@ -1624,6 +1646,7 @@ function mostrarDetalleOC(id){
   if(rec){
     html+=`<div style="background:#f8fafc;border-radius:8px;padding:12px 14px;margin-bottom:14px;display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px">
       <div><div style="font-size:10px;color:#94a3b8;font-weight:600;text-transform:uppercase">Fecha llegada</div><div style="font-size:13px;font-weight:600;color:#1e293b">${rec.fecha||'—'}</div></div>
+      <div><div style="font-size:10px;color:#94a3b8;font-weight:600;text-transform:uppercase">Fecha MP</div><div style="font-size:13px;font-weight:600;color:#1e293b">${rec.fecha_mp||'—'}</div></div>
       <div><div style="font-size:10px;color:#94a3b8;font-weight:600;text-transform:uppercase">Hora</div><div style="font-size:13px;font-weight:600;color:#1e293b">${rec.hora||'—'}</div></div>
       <div><div style="font-size:10px;color:#94a3b8;font-weight:600;text-transform:uppercase">Planta</div><div style="font-size:13px;font-weight:600;color:#1e293b">${rec.planta||'—'}</div></div>
       <div><div style="font-size:10px;color:#94a3b8;font-weight:600;text-transform:uppercase">Unidad</div><div style="font-size:13px;font-weight:600;color:#1e293b">${rec.unidad||'—'}</div></div>
@@ -1683,7 +1706,7 @@ function renderLog(){
     else{const[mo,dy,yr]=r.fecha.split('/');d=new Date(yr,mo-1,dy);}
     return isNaN(d)||d<=limite;
   });
-  if(!filtered.length){tbody.innerHTML='<tr><td colspan="14" style="text-align:center;color:#94a3b8;padding:24px;font-size:13px">Sin registros para las próximas 3 semanas.</td></tr>';return;}
+  if(!filtered.length){tbody.innerHTML='<tr><td colspan="15" style="text-align:center;color:#94a3b8;padding:24px;font-size:13px">Sin registros para las próximas 3 semanas.</td></tr>';return;}
   // Orden ascendente por fecha de llegada (las OCs sin fecha van al final).
   // Normaliza formatos mixtos (ISO "yyyy-mm-dd" y "mm/dd/yyyy") antes de comparar.
   const fechaKey=(f)=>{
@@ -1717,6 +1740,7 @@ function renderLog(){
     return`<tr style="border-bottom:1px solid #f1f5f9;${bg}">
       <td style="padding:12px 10px"><span class="oc-link" onclick="mostrarDetalleOC('${rid}')">${r.oc}</span></td>
       <td style="padding:12px 10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.fecha||'—'}</td>
+      <td style="padding:12px 10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.fecha_mp||'—'}</td>
       <td style="padding:12px 10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${r.prov||''}">${r.prov||'—'}</td>
       <td style="padding:12px 10px;white-space:nowrap">${r.planta||'—'}</td>
       <td style="padding:12px 10px;white-space:nowrap">${r.unidad||'—'}</td>
@@ -1795,7 +1819,7 @@ function exportarExcelMaestro(){
     return{
       'OC':r.oc,'Proveedor':r.prov||'',
       'Descripción':r.desc||'','Artículo':r.art||'',
-      'Fecha llegada':r.fecha||'','Planta':r.planta||'','Unidad':r.unidad||'',
+      'Fecha llegada':r.fecha||'','Fecha MP':r.fecha_mp||'','Planta':r.planta||'','Unidad':r.unidad||'',
       'Semana':r.semana||'','Mes':r.mes||'',
       'Cant. a llegar':r.kg_llegar||'','Tarimas':r.tar_manual||'',
       'Hora reporte':r.reporte||'','Hora entrada':r.entrada||'','Hora salida':r.salida||'',
@@ -1805,7 +1829,7 @@ function exportarExcelMaestro(){
     };
   });
   const ws=XLSX.utils.json_to_sheet(filas);
-  ws['!cols']=[{wch:8},{wch:28},{wch:30},{wch:14},{wch:12},{wch:9},{wch:9},{wch:7},{wch:6},{wch:12},{wch:8},{wch:10},{wch:10},{wch:10},{wch:12},{wch:10},{wch:12},{wch:16},{wch:30},{wch:10}];
+  ws['!cols']=[{wch:8},{wch:28},{wch:30},{wch:14},{wch:12},{wch:12},{wch:9},{wch:9},{wch:7},{wch:6},{wch:12},{wch:8},{wch:10},{wch:10},{wch:10},{wch:12},{wch:10},{wch:12},{wch:16},{wch:30},{wch:10}];
   const wb=XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb,ws,'Recepciones completas');
   XLSX.writeFile(wb,'Tablero_MP_Recepciones_Completas.xlsx');
@@ -1816,8 +1840,8 @@ function exportarExcelMaestro(){
 // ══════════════════════════════
 function exportarCSV(){
   if(!records.length){alert('Sin datos.');return;}
-  const cols=['OC','Proveedor','Descripcion','Articulo','Fecha','Planta','Unidad','Sem','Mes','Hora','Cant.Llegar','Tarimas','Reporte','Entrada','Salida','Inicio','Fin','Comentarios','Estado'];
-  const rows=records.map(r=>[r.oc,r.prov,r.desc,r.art,r.fecha,r.planta,r.unidad,r.semana,r.mes,r.hora,r.kg_llegar,r.tar_manual,r.reporte,r.entrada,r.salida,r.arranque,r.fin,r.comentarios,r.estado].map(v=>'"'+String(v==null?'':v).replace(/"/g,'""')+'"').join(','));
+  const cols=['OC','Proveedor','Descripcion','Articulo','Fecha','FechaMP','Planta','Unidad','Sem','Mes','Hora','Cant.Llegar','Tarimas','Reporte','Entrada','Salida','Inicio','Fin','Comentarios','Estado'];
+  const rows=records.map(r=>[r.oc,r.prov,r.desc,r.art,r.fecha,r.fecha_mp,r.planta,r.unidad,r.semana,r.mes,r.hora,r.kg_llegar,r.tar_manual,r.reporte,r.entrada,r.salida,r.arranque,r.fin,r.comentarios,r.estado].map(v=>'"'+String(v==null?'':v).replace(/"/g,'""')+'"').join(','));
   const csv=[cols.join(','),...rows].join('\n');
   const a=document.createElement('a');
   a.href='data:text/csv;charset=utf-8,\uFEFF'+encodeURIComponent(csv);
